@@ -67,6 +67,16 @@
       display: none;
     }
 
+    #logout-alert {
+      display: none;
+      position: fixed;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3000;
+      min-width: 250px;
+    }
+
     footer {
       margin-top: 60px;
     }
@@ -170,6 +180,11 @@
       </div>
     </div>
   </nav>
+
+  <!-- Logging out alert -->
+  <div id="logout-alert" class="alert alert-info text-center">
+    <i class="fas fa-sign-out-alt"></i> Logging out...
+  </div>
 
   <!-- Welcome message after signup -->
   <div class="alert alert-success text-center" id="signup-welcome">
@@ -611,10 +626,17 @@
     };
 
     function logout() {
-      setCurrentUser(null);
-      currentUser = null;
-      renderNav();
-      navigateTo('landing');
+      // Show logging out alert
+      const logoutAlert = document.getElementById('logout-alert');
+      logoutAlert.style.display = '';
+      // After 1.5 seconds, hide alert and perform logout
+      setTimeout(() => {
+        logoutAlert.style.display = 'none';
+        setCurrentUser(null);
+        currentUser = null;
+        renderNav();
+        navigateTo('landing');
+      }, 1500);
     }
 
     // --- Investments ---
