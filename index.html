@@ -67,16 +67,6 @@
       display: none;
     }
 
-    #logout-alert {
-      display: none;
-      position: fixed;
-      top: 70px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 3000;
-      min-width: 250px;
-    }
-
     footer {
       margin-top: 60px;
     }
@@ -138,6 +128,17 @@
       line-height: 1.5;
     }
 
+    /* Logging Out Modal Custom Style */
+    .modal-logging-out .modal-content {
+      background: linear-gradient(135deg, #f7f7f7, #e0ffe8);
+      border-radius: 15px;
+      border: none;
+      box-shadow: 0 0 20px rgba(46, 204, 113, 0.10);
+    }
+    .modal-logging-out .modal-body {
+      padding: 2.5rem 1.5rem;
+    }
+
     /* White close button with hover effect */
     .btn-close-white {
       filter: brightness(0) invert(1);
@@ -180,11 +181,6 @@
       </div>
     </div>
   </nav>
-
-  <!-- Logging out alert -->
-  <div id="logout-alert" class="alert alert-info text-center">
-    <i class="fas fa-sign-out-alt"></i> Logging out...
-  </div>
 
   <!-- Welcome message after signup -->
   <div class="alert alert-success text-center" id="signup-welcome">
@@ -392,6 +388,18 @@
         </div>
         <div class="modal-footer border-0">
           <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Get Started</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logging Out Modal -->
+  <div class="modal fade modal-logging-out" id="loggingOutModal" tabindex="-1" aria-labelledby="loggingOutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content text-center">
+        <div class="modal-body py-5">
+          <i class="fas fa-sign-out-alt fa-2x text-success mb-3"></i>
+          <h5 id="loggingOutModalLabel" class="mb-0">Logging out...</h5>
         </div>
       </div>
     </div>
@@ -626,12 +634,15 @@
     };
 
     function logout() {
-      // Show logging out alert
-      const logoutAlert = document.getElementById('logout-alert');
-      logoutAlert.style.display = '';
-      // After 1.5 seconds, hide alert and perform logout
+      // Show logging out modal
+      const loggingOutModal = new bootstrap.Modal(document.getElementById('loggingOutModal'), {
+        backdrop: 'static',
+        keyboard: false
+      });
+      loggingOutModal.show();
+      // After 1.5 seconds, hide modal and perform logout
       setTimeout(() => {
-        logoutAlert.style.display = 'none';
+        loggingOutModal.hide();
         setCurrentUser(null);
         currentUser = null;
         renderNav();
