@@ -303,8 +303,7 @@
             <canvas id="cryptoQR" width="180" height="180" style="display:none;"></canvas>
           </div>
           <div class="modal-footer">
-            <!-- Changed button text to "Proceed" -->
-            <button type="button" class="btn btn-primary w-100" data-bs-dismiss="modal">Proceed</button>
+            <button type="button" class="btn btn-primary w-100" id="proceedPaymentBtn">Proceed</button>
           </div>
         </div>
       </div>
@@ -568,6 +567,9 @@
         }
 
         // --- Payment Handling: BTC, ETH, USDT ---
+        let currentPaymentUri = "";
+        let currentCryptoType = "";
+
         document.getElementById('investmentForm').onsubmit = function(e) {
             e.preventDefault();
             const amountInput = document.getElementById('amount');
@@ -613,10 +615,9 @@
                 cryptoName = "Tether (USDT-ERC20)";
             }
 
-            // Try to open wallet app for BTC/ETH
-            if (cryptoType === "BTC" || cryptoType === "ETH") {
-                window.location.href = paymentUri;
-            }
+            // Store for Proceed button
+            currentPaymentUri = paymentUri;
+            currentCryptoType = cryptoType;
 
             // Show crypto payment modal as fallback
             const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
@@ -641,6 +642,24 @@
 
             modal.show();
             confirmBtn.classList.remove('d-none');
+        };
+
+        // Proceed button logic
+        document.getElementById('proceedPaymentBtn').onclick = function() {
+            if (currentCryptoType === "BTC" || currentCryptoType === "ETH") {
+                window.location.href = currentPaymentUri;
+            } else if (currentCryptoType === "USDT") {
+                const address = document.querySelector('#cryptoPaymentDetails .wallet-address').innerText;
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(address).then(function() {
+                        alert("USDT wallet address copied to clipboard. Please paste it in your crypto app.");
+                    }, function() {
+                        alert("Copy the wallet address manually: " + address);
+                    });
+                } else {
+                    alert("Copy the wallet address manually: " + address);
+                }
+            }
         };
 
         // Payment Confirmation
