@@ -248,7 +248,7 @@
       </div>
     </footer>
 
-    <!-- Crypto Payment Modal: Wallet Address and QR -->
+    <!-- Crypto Payment Modal: Wallet Address, QR, Invest Button -->
     <div class="modal fade" id="cryptoPaymentModal" tabindex="-1" aria-labelledby="cryptoPaymentModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -259,6 +259,10 @@
           <div class="modal-body" style="text-align:center;">
             <div id="cryptoPaymentDetails"></div>
             <canvas id="cryptoQR" width="180" height="180" style="display:none;"></canvas>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success" id="investModalBtn">Invest</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           </div>
         </div>
       </div>
@@ -521,7 +525,8 @@
             document.getElementById('totalReturns').innerText = '$' + totalReturn.toLocaleString(undefined, {minimumFractionDigits:2});
         }
 
-        // --- Payment Handling: Show Wallet Address and QR ---
+        // --- Payment Handling: Show Wallet Address and QR, and Invest Button ---
+        let lastAmount = 0, lastCryptoType = '', lastEstimatedReturn = 0;
         document.getElementById('investmentForm').onsubmit = function(e) {
             e.preventDefault();
             const amountInput = document.getElementById('amount');
@@ -551,6 +556,11 @@
                 qrValue = selectedAddress;
             }
 
+            // Save for Invest button
+            lastAmount = amount;
+            lastCryptoType = cryptoType;
+            lastEstimatedReturn = +(amount * availableInvestments[0].rate).toFixed(2); // You can improve to use selected plan
+
             // Show modal
             const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
             let html = `
@@ -572,6 +582,34 @@
                 document.getElementById('cryptoQR').style.display = 'block';
             }
             modal.show();
+        };
+
+        // --- Invest Button in Modal ---
+        document.getElementById('investModalBtn').onclick = function() {
+            // Add investment to user's account
+            if (!currentUser) return;
+            const today = new Date();
+            const dateStr = today.toISOString().slice(0,10);
+
+            let investments = getInvestments();
+            investments.unshift({
+                date: dateStr,
+                amount: lastAmount,
+                return: lastEstimatedReturn,
+                status: 'Active'
+            });
+            saveInvestments(investments);
+            renderInvestments();
+            updateTotals();
+
+            // Show success alert
+            const alert = document.getElementById('formAlert');
+            alert.classList.remove('d-none');
+            setTimeout(() => alert.classList.add('d-none'), 2000);
+
+            // Hide modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('cryptoPaymentModal'));
+            if (modal) modal.hide();
         };
 
         // --- Footer Quick Links Navigation ---
