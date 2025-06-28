@@ -42,7 +42,6 @@
             .dashboard-card, .landing-hero { padding: 1rem; }
             h2 { font-size: 1.5rem; }
         }
-        /* Crypto Payment Modal Styles */
         #cryptoPaymentModal .modal-body {
             text-align: center;
         }
@@ -67,9 +66,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav" id="nav-links">
-                    <!-- Dynamic nav links -->
-                </ul>
+                <ul class="navbar-nav" id="nav-links"></ul>
             </div>
         </div>
     </nav>
@@ -199,11 +196,19 @@
         <div class="mt-4">
             <h4 class="mb-3">Add New Investment</h4>
             <form id="investmentForm" class="row g-3">
-                <div class="col-12 col-md-6">
+                <div class="col-12 col-md-4">
                     <label for="amount" class="form-label">Amount ($)</label>
                     <input type="number" min="100" step="0.01" class="form-control" id="amount" placeholder="Enter amount" required>
                 </div>
-                <div class="col-12 col-md-6 d-flex align-items-end">
+                <div class="col-12 col-md-4">
+                    <label for="cryptoType" class="form-label">Pay With</label>
+                    <select class="form-select" id="cryptoType" required>
+                        <option value="BTC">Bitcoin (BTC)</option>
+                        <option value="ETH">Ethereum (ETH)</option>
+                        <option value="USDT">Tether (USDT-ERC20)</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-4 d-flex align-items-end">
                     <button type="submit" class="btn btn-success w-100"><i class="fas fa-plus-circle"></i> Invest Now</button>
                 </div>
             </form>
@@ -561,54 +566,79 @@
             document.getElementById('totalReturns').innerText = '$' + totalReturn.toLocaleString(undefined, {minimumFractionDigits:2});
         }
 
-        // --- Payment Handling: Redirect to Bitcoin App ---
+        // --- Payment Handling: BTC, ETH, USDT ---
         document.getElementById('investmentForm').onsubmit = function(e) {
             e.preventDefault();
             const amountInput = document.getElementById('amount');
+            const cryptoType = document.getElementById('cryptoType').value;
             const amount = parseFloat(amountInput.value);
             if (isNaN(amount) || amount < 100) {
                 amountInput.classList.add('is-invalid');
                 return;
             }
             amountInput.classList.remove('is-invalid');
-
-            // Store pending amount
             sessionStorage.setItem('pendingInvestmentAmount', amount);
+            sessionStorage.setItem('pendingCryptoType', cryptoType);
 
-            // Crypto payment instructions
-            const btcAddress = "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P"; // <-- REPLACE with your BTC address
-            const btcUsdRate = 50000; // Example BTC/USD rate, update as needed
-            const btcAmount = (amount / btcUsdRate).toFixed(6);
+            // --- Wallet addresses and rates ---
+            const wallets = {
+                BTC: {
+                    address: "1YourBitcoinWalletAddressHere", // <-- REPLACE
+                    usdRate: 50000 // <-- UPDATE
+                },
+                ETH: {
+                    address: "0xYourEthereumWalletAddressHere", // <-- REPLACE
+                    usdRate: 3500 // <-- UPDATE
+                },
+                USDT: {
+                    address: "0xYourUSDTWalletAddressHere", // <-- REPLACE (ERC20)
+                    usdRate: 1
+                }
+            };
 
-            // Bitcoin URI for wallet apps
-            const btcUri = `bitcoin:${btcAddress}?amount=${btcAmount}`;
+            const selected = wallets[cryptoType];
+            let cryptoAmount = (amount / selected.usdRate).toFixed(6);
+            let paymentUri = "";
+            let cryptoName = "";
+            if (cryptoType === "BTC") {
+                paymentUri = `bitcoin:${selected.address}?amount=${cryptoAmount}`;
+                cryptoName = "Bitcoin (BTC)";
+            } else if (cryptoType === "ETH") {
+                paymentUri = `ethereum:${selected.address}?value=${cryptoAmount}`;
+                cryptoName = "Ethereum (ETH)";
+            } else if (cryptoType === "USDT") {
+                // USDT-ERC20: no standard URI, just show address and amount
+                paymentUri = selected.address;
+                cryptoName = "Tether (USDT-ERC20)";
+            }
 
-            // Try to open the Bitcoin app
-            window.location.href = btcUri;
+            // Try to open wallet app for BTC/ETH
+            if (cryptoType === "BTC" || cryptoType === "ETH") {
+                window.location.href = paymentUri;
+            }
 
             // Show crypto payment modal as fallback
             const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
             let html = `
                 <div>
-                    <p>Send exactly <strong>${btcAmount} BTC</strong> (≈ $${amount}) to this wallet address:</p>
-                    <div class="wallet-address">${btcAddress}</div>
-                    <p>Or scan the QR code below with your Bitcoin wallet app.</p>
+                    <p>Send exactly <strong>${cryptoAmount} ${cryptoType}</strong> (≈ $${amount}) to this wallet address:</p>
+                    <div class="wallet-address">${selected.address}</div>
+                    <p>Or scan the QR code below with your ${cryptoName} wallet app.</p>
                     <p>After sending, click <strong>Confirm Payment Received</strong> below.</p>
                 </div>
             `;
             document.getElementById('cryptoPaymentDetails').innerHTML = html;
 
-            // Generate QR code
+            // Generate QR code for BTC/ETH; for USDT, QR is just the address
+            let qrValue = (cryptoType === "BTC" || cryptoType === "ETH") ? paymentUri : selected.address;
             const qr = new QRious({
                 element: document.getElementById('cryptoQR'),
-                value: btcUri,
+                value: qrValue,
                 size: 180
             });
             document.getElementById('cryptoQR').style.display = 'block';
 
             modal.show();
-
-            // Show confirm button
             confirmBtn.classList.remove('d-none');
         };
 
@@ -625,10 +655,11 @@
 
         confirmBtn.addEventListener('click', () => {
             const amount = parseFloat(sessionStorage.getItem('pendingInvestmentAmount'));
-            if (!amount) return alert("No pending investment found.");
+            const cryptoType = sessionStorage.getItem('pendingCryptoType');
+            if (!amount || !cryptoType) return alert("No pending investment found.");
 
             const confirmed = confirm(
-                `Have you completed the crypto payment (≈ $${amount.toFixed(2)}) to the provided wallet address?`
+                `Have you completed the crypto payment (≈ $${amount.toFixed(2)}) in ${cryptoType} to the provided wallet address?`
             );
             if (!confirmed) return;
 
@@ -647,6 +678,7 @@
             updateTotals();
 
             sessionStorage.removeItem('pendingInvestmentAmount');
+            sessionStorage.removeItem('pendingCryptoType');
             confirmBtn.classList.add('d-none');
 
             const alert = document.getElementById('formAlert');
