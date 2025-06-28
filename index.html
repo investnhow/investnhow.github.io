@@ -42,6 +42,16 @@
             .dashboard-card, .landing-hero { padding: 1rem; }
             h2 { font-size: 1.5rem; }
         }
+        #cryptoQR {
+            margin: 1rem auto;
+            display: block;
+        }
+        .wallet-address {
+            font-family: monospace;
+            font-size: 1.1em;
+            word-break: break-all;
+            margin: 0.5em 0;
+        }
     </style>
 </head>
 <body>
@@ -238,16 +248,17 @@
       </div>
     </footer>
 
-    <!-- Crypto Payment Modal with Cryptonix Button -->
+    <!-- Crypto Payment Modal: Wallet Address and QR -->
     <div class="modal fade" id="cryptoPaymentModal" tabindex="-1" aria-labelledby="cryptoPaymentModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title text-success" id="cryptoPaymentModalLabel">Complete Your Crypto Payment</h5>
+            <h5 class="modal-title text-success" id="cryptoPaymentModalLabel">Crypto Payment Instructions</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body" id="cryptonix-widget-container" style="text-align:center;">
-            <!-- Cryptonix payment button will be injected here -->
+          <div class="modal-body" style="text-align:center;">
+            <div id="cryptoPaymentDetails"></div>
+            <canvas id="cryptoQR" width="180" height="180" style="display:none;"></canvas>
           </div>
         </div>
       </div>
@@ -255,6 +266,8 @@
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- QRious for QR code generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script>
         // --- Available Investment Plans ---
         const availableInvestments = [
@@ -508,7 +521,7 @@
             document.getElementById('totalReturns').innerText = '$' + totalReturn.toLocaleString(undefined, {minimumFractionDigits:2});
         }
 
-        // --- Payment Handling with Cryptonix Button ---
+        // --- Payment Handling: Show Wallet Address and QR ---
         document.getElementById('investmentForm').onsubmit = function(e) {
             e.preventDefault();
             const amountInput = document.getElementById('amount');
@@ -520,79 +533,46 @@
             }
             amountInput.classList.remove('is-invalid');
 
-            // Show the payment modal
-            const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
-            modal.show();
-
-            // Remove any previous button
-            document.getElementById('cryptonix-widget-container').innerHTML = '';
-
-            // Prepare coin symbol for Cryptonix (lowercase)
-            let coin = cryptoType.toLowerCase();
-
-            // Your wallet addresses for each coin (replace with your own!)
+            // Wallet addresses (replace with your own!)
             const wallets = {
-                btc: "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P",
-                eth: "0xced6ec6ec624b561483822768b8af6bad3777aee",
-                usdt: "0xced6ec6ec624b561483822768b8af6bad3777aee"
+                BTC: "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P",
+                ETH: "0xced6ec6ec624b561483822768b8af6bad3777aee",
+                USDT: "0xced6ec6ec624b561483822768b8af6bad3777aee"
             };
+            const selectedAddress = wallets[cryptoType];
 
-            // The success page is the dashboard with a deposit=success flag
-            const successUrl = window.location.origin + window.location.pathname + "#dashboard?deposit=success";
-
-            // Inject the Cryptonix payment button
-            const script = document.createElement('script');
-            script.src = "https://pay.cryptonix.com/button.js";
-            script.setAttribute('data-amount', amount);
-            script.setAttribute('data-currency', 'usd');
-            script.setAttribute('data-receiver', wallets[coin]);
-            script.setAttribute('data-coins', coin);
-            script.setAttribute('data-success', successUrl);
-            script.async = true;
-            document.getElementById('cryptonix-widget-container').appendChild(script);
-
-            // Save pending deposit info in sessionStorage for later confirmation
-            sessionStorage.setItem('pendingInvestmentAmount', amount);
-            sessionStorage.setItem('pendingCryptoType', cryptoType);
-        };
-
-        // On page load, check for deposit success in URL
-        window.addEventListener('load', function() {
-            const url = new URL(window.location.href);
-            if (url.hash.includes('deposit=success')) {
-                // Only add deposit if pending info exists
-                const amount = parseFloat(sessionStorage.getItem('pendingInvestmentAmount'));
-                if (amount && currentUser) {
-                    // Use a default plan rate or let user pick (here, using first plan)
-                    const plan = availableInvestments[0];
-                    const estimatedReturn = +(amount * plan.rate).toFixed(2);
-                    const today = new Date();
-                    const dateStr = today.toISOString().slice(0,10);
-
-                    let investments = getInvestments();
-                    investments.unshift({
-                        date: dateStr,
-                        amount: amount,
-                        return: estimatedReturn,
-                        status: 'Active'
-                    });
-                    saveInvestments(investments);
-                    renderInvestments();
-                    updateTotals();
-
-                    // Show success alert
-                    const alert = document.getElementById('formAlert');
-                    alert.classList.remove('d-none');
-                    setTimeout(() => alert.classList.add('d-none'), 2000);
-
-                    // Clear pending info
-                    sessionStorage.removeItem('pendingInvestmentAmount');
-                    sessionStorage.removeItem('pendingCryptoType');
-                }
-                // Remove deposit=success from URL to avoid duplicate deposits
-                history.replaceState(null, '', window.location.pathname + '#dashboard');
+            // Payment URI for QR (for BTC/ETH, use URI; for USDT, just address)
+            let qrValue = "";
+            if (cryptoType === "BTC") {
+                qrValue = `bitcoin:${selectedAddress}?amount=${amount}`;
+            } else if (cryptoType === "ETH") {
+                qrValue = `ethereum:${selectedAddress}`;
+            } else if (cryptoType === "USDT") {
+                qrValue = selectedAddress;
             }
-        });
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
+            let html = `
+                <div>
+                    <p>Send exactly <strong>$${amount} (${cryptoType})</strong> to this wallet address:</p>
+                    <div class="wallet-address">${selectedAddress}</div>
+                    <p>Or scan the QR code below with your ${cryptoType} wallet app.</p>
+                </div>
+            `;
+            document.getElementById('cryptoPaymentDetails').innerHTML = html;
+
+            // Generate QR code
+            if (window.QRious) {
+                const qr = new QRious({
+                    element: document.getElementById('cryptoQR'),
+                    value: qrValue,
+                    size: 180
+                });
+                document.getElementById('cryptoQR').style.display = 'block';
+            }
+            modal.show();
+        };
 
         // --- Footer Quick Links Navigation ---
         function attachFooterLinks() {
@@ -624,5 +604,7 @@
             showSection(hash);
         };
     </script>
+    <!-- QRious for QR code generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 </body>
 </html>
