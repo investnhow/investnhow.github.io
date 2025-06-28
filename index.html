@@ -205,7 +205,7 @@
                     <select class="form-select" id="cryptoType" required>
                         <option value="BTC">Bitcoin (BTC)</option>
                         <option value="ETH">Ethereum (ETH)</option>
-                        <option value="USDT">Tether (USDT-ERC20)</option>
+                        <option value="USDT">Tether (USDT-TRC20)</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-4 d-flex align-items-end">
@@ -535,13 +535,13 @@
             sessionStorage.setItem('pendingInvestmentAmount', amount);
             sessionStorage.setItem('pendingCryptoType', cryptoType);
 
-            // Simulate unique address and QR for each crypto
-            const fakeAddresses = {
-                BTC: "bc1q" + Math.random().toString(36).substring(2, 15),
-                ETH: "0x" + Math.random().toString(16).substring(2, 42),
-                USDT: "0x" + Math.random().toString(16).substring(2, 42)
+            // Use your specified wallet addresses
+            const addresses = {
+                BTC: "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P",
+                ETH: "0xced6ec6ec624b561483822768b8af6bad3777aee",
+                USDT: "TB3imDVw6ofEdmAq8YrL2bczmXpnpHw2m8"
             };
-            const address = fakeAddresses[cryptoType];
+            const address = addresses[cryptoType];
             let qrValue = "";
             let uri = "";
             if (cryptoType === "BTC") {
@@ -553,8 +553,9 @@
                 qrValue = `ethereum:${address}?value=${ethAmount}`;
                 uri = qrValue;
             } else {
+                // USDT (TRC20): most wallets don't support URI, but TronLink does support "tronlink://send?to=address&asset=USDT&amount=..."
                 qrValue = address;
-                uri = `ethereum:${address}`;
+                uri = `tronlink://send?to=${address}&asset=USDT&amount=${amount}`;
             }
             paymentDetails = { address, amount, cryptoType, qrValue, uri };
 
