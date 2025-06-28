@@ -2,11 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>InvestNow - Multi-Crypto Investment Platform (Demo)</title>
+    <title>InvestNow - Production Crypto Investment</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         body { background: #f4f7fa; }
@@ -271,90 +270,10 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script>
-        // --- Available Investment Plans ---
-        const availableInvestments = [
-            {
-                id: 1,
-                name: "Fixed Income Plan",
-                description: "Earn 6% annual interest. Minimum $500.",
-                minAmount: 500,
-                rate: 0.06
-            },
-            {
-                id: 2,
-                name: "Growth Fund",
-                description: "Projected 10% annual return. Minimum $1000.",
-                minAmount: 1000,
-                rate: 0.10
-            },
-            {
-                id: 3,
-                name: "Short-Term Bond",
-                description: "4% for 6 months. Minimum $300.",
-                minAmount: 300,
-                rate: 0.04
-            }
-        ];
-
-        function renderAvailableInvestments() {
-            const container = document.getElementById('availableInvestmentsList');
-            if (!container) return;
-            container.innerHTML = '';
-            availableInvestments.forEach(plan => {
-                container.innerHTML += `
-                    <div class="col-md-4 mb-3">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-body d-flex flex-column">
-                                <h5 class="card-title text-success">${plan.name}</h5>
-                                <p class="card-text flex-grow-1">${plan.description}</p>
-                                <div class="mb-2"><small>Min: $${plan.minAmount.toLocaleString()}</small></div>
-                                <button class="btn btn-outline-success w-100 invest-btn" 
-                                    data-id="${plan.id}" 
-                                    data-min="${plan.minAmount}" 
-                                    data-rate="${plan.rate}">
-                                    Invest in this
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            document.querySelectorAll('.invest-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.getElementById('amount').value = this.getAttribute('data-min');
-                    document.getElementById('amount').focus();
-                });
-            });
-        }
-
         // --- State Management ---
         let currentUser = null;
-
-        function getUsers() {
-            return JSON.parse(localStorage.getItem('users') || '{}');
-        }
-        function saveUsers(users) {
-            localStorage.setItem('users', JSON.stringify(users));
-        }
-        function getInvestments() {
-            if (!currentUser) return [];
-            return JSON.parse(localStorage.getItem('investments_' + currentUser) || '[]');
-        }
-        function saveInvestments(investments) {
-            if (!currentUser) return;
-            localStorage.setItem('investments_' + currentUser, JSON.stringify(investments));
-        }
-        function setCurrentUser(username) {
-            currentUser = username;
-            if (username) {
-                localStorage.setItem('currentUser', username);
-            } else {
-                localStorage.removeItem('currentUser');
-            }
-        }
-        function getCurrentUser() {
-            return localStorage.getItem('currentUser');
-        }
+        let lastInvoiceId = null;
+        let paymentCheckInterval = null;
 
         // --- Navigation ---
         function renderNav() {
@@ -376,7 +295,6 @@
                 link.addEventListener('click', navHandler);
             });
         }
-
         function navHandler(e) {
             e.preventDefault();
             const id = e.target.id;
@@ -392,8 +310,6 @@
                 navigateTo('landing');
             }
         }
-
-        // --- Section Display ---
         function showSection(section) {
             document.getElementById('landing-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'none';
@@ -419,8 +335,6 @@
                 document.getElementById('landing-section').style.display = '';
             }
         }
-
-        // --- SPA Navigation with Hash ---
         function navigateTo(section) {
             let hash = '';
             if (section === 'landing' || section === 'home') hash = '#home';
@@ -430,7 +344,6 @@
             window.location.hash = hash;
             showSection(section);
         }
-
         function handleHashChange() {
             let hash = window.location.hash.replace('#', '');
             if (!hash || hash === 'home') hash = 'landing';
@@ -438,7 +351,6 @@
             showSection(hash);
             renderNav();
         }
-
         window.addEventListener('hashchange', handleHashChange);
 
         // --- Auth Events ---
@@ -450,14 +362,13 @@
             e.preventDefault();
             navigateTo('login');
         };
-
         document.getElementById('loginForm').onsubmit = function(e) {
             e.preventDefault();
             const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
-            const users = getUsers();
+            const users = JSON.parse(localStorage.getItem('users') || '{}');
             if (users[username] && users[username] === password) {
-                setCurrentUser(username);
+                localStorage.setItem('currentUser', username);
                 currentUser = username;
                 renderNav();
                 navigateTo('dashboard');
@@ -467,12 +378,11 @@
                 alert.classList.remove('d-none');
             }
         };
-
         document.getElementById('signupForm').onsubmit = function(e) {
             e.preventDefault();
             const username = document.getElementById('signup-username').value.trim();
             const password = document.getElementById('signup-password').value;
-            const users = getUsers();
+            const users = JSON.parse(localStorage.getItem('users') || '{}');
             if (users[username]) {
                 const alert = document.getElementById('signup-alert');
                 alert.innerText = "Username already exists.";
@@ -480,21 +390,28 @@
                 return;
             }
             users[username] = password;
-            saveUsers(users);
-            setCurrentUser(username);
+            localStorage.setItem('users', JSON.stringify(users));
+            localStorage.setItem('currentUser', username);
             currentUser = username;
             renderNav();
             navigateTo('dashboard');
         };
-
         function logout() {
-            setCurrentUser(null);
+            localStorage.removeItem('currentUser');
             currentUser = null;
             renderNav();
             navigateTo('landing');
         }
 
         // --- Investments ---
+        function getInvestments() {
+            if (!currentUser) return [];
+            return JSON.parse(localStorage.getItem('investments_' + currentUser) || '[]');
+        }
+        function saveInvestments(investments) {
+            if (!currentUser) return;
+            localStorage.setItem('investments_' + currentUser, JSON.stringify(investments));
+        }
         function renderInvestments() {
             const table = document.getElementById('investmentTable');
             const investments = getInvestments();
@@ -510,7 +427,6 @@
                 `;
             });
         }
-
         function updateTotals() {
             const investments = getInvestments();
             let totalInvested = investments.reduce((sum, inv) => sum + inv.amount, 0);
@@ -519,10 +435,42 @@
             document.getElementById('totalReturns').innerText = '$' + totalReturn.toLocaleString(undefined, {minimumFractionDigits:2});
         }
 
-        // --- Payment Handling: Multi-Crypto (Demo) ---
-        let paymentDetails = {};
+        // --- Available Investment Plans ---
+        const availableInvestments = [
+            { id: 1, name: "Fixed Income Plan", description: "Earn 6% annual interest. Minimum $500.", minAmount: 500, rate: 0.06 },
+            { id: 2, name: "Growth Fund", description: "Projected 10% annual return. Minimum $1000.", minAmount: 1000, rate: 0.10 },
+            { id: 3, name: "Short-Term Bond", description: "4% for 6 months. Minimum $300.", minAmount: 300, rate: 0.04 }
+        ];
+        function renderAvailableInvestments() {
+            const container = document.getElementById('availableInvestmentsList');
+            if (!container) return;
+            container.innerHTML = '';
+            availableInvestments.forEach(plan => {
+                container.innerHTML += `
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title text-success">${plan.name}</h5>
+                                <p class="card-text flex-grow-1">${plan.description}</p>
+                                <div class="mb-2"><small>Min: $${plan.minAmount.toLocaleString()}</small></div>
+                                <button class="btn btn-outline-success w-100 invest-btn" data-id="${plan.id}" data-min="${plan.minAmount}" data-rate="${plan.rate}">
+                                    Invest in this
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.querySelectorAll('.invest-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.getElementById('amount').value = this.getAttribute('data-min');
+                    document.getElementById('amount').focus();
+                });
+            });
+        }
 
-        document.getElementById('investmentForm').onsubmit = function(e) {
+        // --- Payment Handling: Live ---
+        document.getElementById('investmentForm').onsubmit = async function(e) {
             e.preventDefault();
             const amountInput = document.getElementById('amount');
             const cryptoType = document.getElementById('cryptoType').value;
@@ -532,111 +480,93 @@
                 return;
             }
             amountInput.classList.remove('is-invalid');
-            sessionStorage.setItem('pendingInvestmentAmount', amount);
-            sessionStorage.setItem('pendingCryptoType', cryptoType);
 
-            // Use your specified wallet addresses
-            const addresses = {
-                BTC: "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P",
-                ETH: "0xced6ec6ec624b561483822768b8af6bad3777aee",
-                USDT: "TB3imDVw6ofEdmAq8YrL2bczmXpnpHw2m8"
-            };
-            const address = addresses[cryptoType];
-            let qrValue = "";
-            let uri = "";
-            if (cryptoType === "BTC") {
-                const btcAmount = (amount/50000).toFixed(6);
-                qrValue = `bitcoin:${address}?amount=${btcAmount}`;
-                uri = qrValue;
-            } else if (cryptoType === "ETH") {
-                const ethAmount = (amount/3500).toFixed(6);
-                qrValue = `ethereum:${address}?value=${ethAmount}`;
-                uri = qrValue;
-            } else {
-                // USDT (TRC20): most wallets don't support URI, but TronLink does support "tronlink://send?to=address&asset=USDT&amount=..."
-                qrValue = address;
-                uri = `tronlink://send?to=${address}&asset=USDT&amount=${amount}`;
-            }
-            paymentDetails = { address, amount, cryptoType, qrValue, uri };
-
-            // Show modal with payment instructions
+            // Request invoice from backend
             const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
-            let html = `
-                <div>
-                    <p>Send exactly <strong>${amount} ${cryptoType}</strong> to this address:</p>
-                    <div class="wallet-address">${address}</div>
-                    <p>Or scan the QR code below with your ${cryptoType} wallet app.</p>
-                    <p><small>After payment is detected, your investment will appear automatically in your dashboard (simulated for demo).</small></p>
-                </div>
-            `;
-            document.getElementById('cryptoPaymentDetails').innerHTML = html;
-            // Show QR code
-            if (window.QRious) {
-                const qr = new QRious({
-                    element: document.getElementById('cryptoQR'),
-                    value: qrValue,
-                    size: 180
-                });
-                document.getElementById('cryptoQR').style.display = 'block';
-            }
-            document.getElementById('okWillPayBtn').disabled = false;
-            modal.show();
-        };
-
-        document.getElementById('okWillPayBtn').addEventListener('click', function() {
-            // Redirect to wallet app with prefilled address (and amount if supported)
-            if (paymentDetails && paymentDetails.uri) {
-                window.location.href = paymentDetails.uri;
-            }
-            // Simulate payment detection
             document.getElementById('cryptoPaymentDetails').innerHTML = `
                 <div class="my-3">
                     <div class="spinner-border text-success" role="status"></div>
-                    <div>Waiting for payment confirmation (simulated)...</div>
-                    <div class="mt-2 small">This window will close automatically when payment is detected.</div>
+                    <div>Generating payment instructions...</div>
+                </div>
+            `;
+            document.getElementById('cryptoQR').style.display = 'none';
+            modal.show();
+
+            try {
+                const response = await fetch('/api/create-invoice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount: amount,
+                        crypto: cryptoType,
+                        user: currentUser
+                    })
+                });
+                const data = await response.json();
+                if (data && data.address && data.amount && data.invoice_id) {
+                    lastInvoiceId = data.invoice_id;
+                    let html = `
+                        <div>
+                            <p>Send exactly <strong>${data.amount} ${cryptoType}</strong> to this address:</p>
+                            <div class="wallet-address">${data.address}</div>
+                            <p>Or scan the QR code below with your ${cryptoType} wallet app.</p>
+                            <p><small>After payment is received and confirmed on the blockchain, your investment will appear automatically in your dashboard.</small></p>
+                        </div>
+                    `;
+                    document.getElementById('cryptoPaymentDetails').innerHTML = html;
+                    // Show QR code
+                    if (window.QRious) {
+                        let qrValue = data.qr || `${data.address}`;
+                        const qr = new QRious({
+                            element: document.getElementById('cryptoQR'),
+                            value: qrValue,
+                            size: 180
+                        });
+                        document.getElementById('cryptoQR').style.display = 'block';
+                    }
+                    document.getElementById('okWillPayBtn').disabled = false;
+                } else {
+                    document.getElementById('cryptoPaymentDetails').innerHTML = `<div class="alert alert-danger">Failed to generate payment instructions. Please try again.</div>`;
+                    document.getElementById('okWillPayBtn').disabled = true;
+                }
+            } catch {
+                document.getElementById('cryptoPaymentDetails').innerHTML = `<div class="alert alert-danger">Failed to generate payment instructions. Please try again.</div>`;
+                document.getElementById('okWillPayBtn').disabled = true;
+            }
+        };
+
+        document.getElementById('okWillPayBtn').addEventListener('click', function() {
+            // Start polling for payment detection
+            document.getElementById('cryptoPaymentDetails').innerHTML = `
+                <div class="my-3">
+                    <div class="spinner-border text-success" role="status"></div>
+                    <div>Waiting for payment confirmation...</div>
+                    <div class="mt-2 small">Please complete the crypto payment in your wallet. This window will close automatically when payment is detected.</div>
                 </div>
             `;
             document.getElementById('okWillPayBtn').disabled = true;
-            setTimeout(simulatePaymentDetected, 6000 + Math.random()*4000);
+            if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+            paymentCheckInterval = setInterval(checkPaymentStatus, 10000);
+            checkPaymentStatus();
         });
 
-        function simulatePaymentDetected() {
-            // Optionally close modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('cryptoPaymentModal'));
-            if (modal) modal.hide();
-            // Show investment added message
-            const alert = document.getElementById('formAlert');
-            alert.classList.remove('d-none');
-            setTimeout(() => alert.classList.add('d-none'), 2000);
-            // Add investment to localStorage
-            const today = new Date();
-            const dateStr = today.toISOString().slice(0,10);
-            const amount = paymentDetails.amount;
-            const estimatedReturn = +(amount * 0.06).toFixed(2);
-            let investments = getInvestments();
-            investments.unshift({
-                date: dateStr,
-                amount: amount,
-                return: estimatedReturn,
-                status: 'Active'
-            });
-            saveInvestments(investments);
-            renderInvestments();
-            updateTotals();
-            sessionStorage.removeItem('pendingInvestmentAmount');
-            sessionStorage.removeItem('pendingCryptoType');
-            paymentDetails = {};
-        }
-
-        // --- Footer Quick Links Navigation ---
-        function attachFooterLinks() {
-            document.querySelectorAll('.footer-link').forEach(link => {
-                link.addEventListener('click', e => {
-                    e.preventDefault();
-                    const section = e.target.getAttribute('data-section');
-                    navigateTo(section);
-                });
-            });
+        async function checkPaymentStatus() {
+            if (!lastInvoiceId) return;
+            const res = await fetch(`/api/check-payment?invoice_id=${encodeURIComponent(lastInvoiceId)}`);
+            const data = await res.json();
+            if (data && data.paid) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+                const modal = bootstrap.Modal.getInstance(document.getElementById('cryptoPaymentModal'));
+                if (modal) modal.hide();
+                const alert = document.getElementById('formAlert');
+                alert.classList.remove('d-none');
+                setTimeout(() => alert.classList.add('d-none'), 2000);
+                // Optionally refresh investments from backend here
+                lastInvoiceId = null;
+                renderInvestments();
+                updateTotals();
+            }
         }
 
         // --- App Initialization ---
@@ -647,18 +577,14 @@
             e.preventDefault();
             navigateTo('landing');
         };
-
         window.onload = function() {
-            currentUser = getCurrentUser();
+            currentUser = localStorage.getItem('currentUser');
             renderNav();
-            attachFooterLinks();
             let hash = window.location.hash.replace('#', '');
             if (!hash || hash === 'home') hash = 'landing';
             if (hash === 'dashboard' && !currentUser) hash = 'login';
             showSection(hash);
         };
     </script>
-    <!-- QRious for QR code generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 </body>
 </html>
