@@ -212,9 +212,6 @@
                     <button type="submit" class="btn btn-success w-100"><i class="fas fa-plus-circle"></i> Invest Now</button>
                 </div>
             </form>
-            <div class="mt-3">
-                <button id="confirmPaymentBtn" class="btn btn-primary w-100 d-none">Confirm Payment Received</button>
-            </div>
             <div id="formAlert" class="alert alert-success mt-3 d-none" role="alert">
                 Investment added successfully!
             </div>
@@ -624,7 +621,7 @@
                     <p>Send exactly <strong>${cryptoAmount} ${cryptoType}</strong> (≈ $${amount}) to this wallet address:</p>
                     <div class="wallet-address">${selected.address}</div>
                     <p>Or scan the QR code below with your ${cryptoName} wallet app.</p>
-                    <p>After sending, click <strong>Confirm Payment Received</strong> below.</p>
+                    <p>After sending, click <strong>OK, I Will Pay</strong> below to complete your investment.</p>
                 </div>
             `;
             document.getElementById('cryptoPaymentDetails').innerHTML = html;
@@ -639,60 +636,15 @@
             document.getElementById('cryptoQR').style.display = 'block';
 
             modal.show();
-            confirmBtn.classList.remove('d-none');
         };
 
-        // Payment Confirmation
-        const confirmBtn = document.getElementById('confirmPaymentBtn');
-        window.addEventListener('load', () => {
-            const pendingAmount = sessionStorage.getItem('pendingInvestmentAmount');
-            if (pendingAmount) {
-                confirmBtn.classList.remove('d-none');
-            } else {
-                confirmBtn.classList.add('d-none');
-            }
-        });
-
-        confirmBtn.addEventListener('click', () => {
-            const amount = parseFloat(sessionStorage.getItem('pendingInvestmentAmount'));
-            const cryptoType = sessionStorage.getItem('pendingCryptoType');
-            if (!amount || !cryptoType) return alert("No pending investment found.");
-
-            const confirmed = confirm(
-                `Have you completed the crypto payment (≈ $${amount.toFixed(2)}) in ${cryptoType} to the provided wallet address?`
-            );
-            if (!confirmed) return;
-
-            const today = new Date();
-            const dateStr = today.toISOString().slice(0,10);
-            const estimatedReturn = +(amount * 0.06).toFixed(2);
-            let investments = getInvestments();
-            investments.unshift({
-                date: dateStr,
-                amount: amount,
-                return: estimatedReturn,
-                status: 'Active'
-            });
-            saveInvestments(investments);
-            renderInvestments();
-            updateTotals();
-
-            sessionStorage.removeItem('pendingInvestmentAmount');
-            sessionStorage.removeItem('pendingCryptoType');
-            confirmBtn.classList.add('d-none');
-
-            const alert = document.getElementById('formAlert');
-            alert.classList.remove('d-none');
-            setTimeout(() => alert.classList.add('d-none'), 2000);
-        });
-
-        // "OK, I Will Pay" button also processes the investment
+        // "OK, I Will Pay" button processes the investment
         document.getElementById('okWillPayBtn').addEventListener('click', function() {
             const amount = parseFloat(sessionStorage.getItem('pendingInvestmentAmount'));
             const cryptoType = sessionStorage.getItem('pendingCryptoType');
             if (!amount || !cryptoType) return;
 
-            // Add investment (same as Confirm Payment Received)
+            // Add investment
             const today = new Date();
             const dateStr = today.toISOString().slice(0,10);
             const estimatedReturn = +(amount * 0.06).toFixed(2);
@@ -707,10 +659,9 @@
             renderInvestments();
             updateTotals();
 
-            // Clean up sessionStorage and UI
+            // Clean up sessionStorage
             sessionStorage.removeItem('pendingInvestmentAmount');
             sessionStorage.removeItem('pendingCryptoType');
-            confirmBtn.classList.add('d-none');
 
             // Show success alert
             const alert = document.getElementById('formAlert');
