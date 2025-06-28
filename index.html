@@ -45,7 +45,7 @@
         #cryptoPaymentModal .modal-body {
             text-align: center;
         }
-        #cryptoQRimg {
+        #cryptoQR {
             margin: 1rem auto;
             display: block;
         }
@@ -221,14 +221,16 @@
         </div>
     </div>
 
-    <!-- Footer -->
+    <!-- Footer (matches header style) -->
     <footer class="bg-white shadow-sm border-top">
       <div class="container py-4">
         <div class="row align-items-center">
+          <!-- Brand and tagline -->
           <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
             <span class="fw-bold text-success fs-5"><i class="fas fa-chart-line"></i> InvestNow</span>
             <span class="d-block small text-muted mt-1">Your trusted platform for secure and transparent investments.</span>
           </div>
+          <!-- Quick Links -->
           <div class="col-md-4 text-center mb-3 mb-md-0">
             <ul class="list-inline mb-0">
               <li class="list-inline-item"><a href="#home" class="text-muted text-decoration-none footer-link" data-section="landing">Home</a></li>
@@ -237,6 +239,7 @@
               <li class="list-inline-item"><a href="#dashboard" class="text-muted text-decoration-none footer-link" data-section="dashboard">Dashboard</a></li>
             </ul>
           </div>
+          <!-- Social Media -->
           <div class="col-md-4 text-center text-md-end">
             <a href="https://www.facebook.com/investnhow" class="text-success me-3 fs-5"><i class="fab fa-facebook"></i></a>
             <a href="#" class="text-success me-3 fs-5"><i class="fab fa-twitter"></i></a>
@@ -297,10 +300,10 @@
           </div>
           <div class="modal-body">
             <div id="cryptoPaymentDetails"></div>
-            <!-- The QR code image will be inserted dynamically here -->
+            <canvas id="cryptoQR" width="180" height="180" style="display:none;"></canvas>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-primary w-100" data-bs-dismiss="modal">OK, I Will Pay</button>
+            <button type="button" class="btn btn-primary w-100" id="okWillPayBtn" data-bs-dismiss="modal">OK, I Will Pay</button>
           </div>
         </div>
       </div>
@@ -308,6 +311,8 @@
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- QRious for QR code generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script>
         // --- Available Investment Plans ---
         const availableInvestments = [
@@ -578,15 +583,15 @@
             // --- Wallet addresses and rates ---
             const wallets = {
                 BTC: {
-                    address: "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P",
-                    usdRate: 50000
+                    address: "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P", // <-- REPLACE
+                    usdRate: 50000 // <-- UPDATE
                 },
                 ETH: {
-                    address: "0xced6ec6ec624b561483822768b8af6bad3777aee",
-                    usdRate: 3500
+                    address: "0xced6ec6ec624b561483822768b8af6bad3777aee", // <-- REPLACE
+                    usdRate: 3500 // <-- UPDATE
                 },
                 USDT: {
-                    address: "0xced6ec6ec624b561483822768b8af6bad3777aee",
+                    address: "0xced6ec6ec624b561483822768b8af6bad3777aee", // <-- REPLACE (ERC20)
                     usdRate: 1
                 }
             };
@@ -602,6 +607,7 @@
                 paymentUri = `ethereum:${selected.address}?value=${cryptoAmount}`;
                 cryptoName = "Ethereum (ETH)";
             } else if (cryptoType === "USDT") {
+                // USDT-ERC20: no standard URI, just show address and amount
                 paymentUri = selected.address;
                 cryptoName = "Tether (USDT-ERC20)";
             }
@@ -623,24 +629,14 @@
             `;
             document.getElementById('cryptoPaymentDetails').innerHTML = html;
 
-            // Generate QR code image using external API
+            // Generate QR code for BTC/ETH; for USDT, QR is just the address
             let qrValue = (cryptoType === "BTC" || cryptoType === "ETH") ? paymentUri : selected.address;
-            const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrValue)}`;
-
-            // Remove old QR image if present
-            let oldImg = document.getElementById('cryptoQRimg');
-            if (oldImg) oldImg.remove();
-
-            // Add new QR image
-            let qrImg = document.createElement('img');
-            qrImg.id = 'cryptoQRimg';
-            qrImg.width = 180;
-            qrImg.height = 180;
-            qrImg.style.display = 'block';
-            qrImg.style.margin = '1rem auto';
-            qrImg.src = qrImgUrl;
-            qrImg.alt = "Crypto Payment QR Code";
-            document.getElementById('cryptoPaymentDetails').appendChild(qrImg);
+            const qr = new QRious({
+                element: document.getElementById('cryptoQR'),
+                value: qrValue,
+                size: 180
+            });
+            document.getElementById('cryptoQR').style.display = 'block';
 
             modal.show();
             confirmBtn.classList.remove('d-none');
@@ -685,6 +681,38 @@
             sessionStorage.removeItem('pendingCryptoType');
             confirmBtn.classList.add('d-none');
 
+            const alert = document.getElementById('formAlert');
+            alert.classList.remove('d-none');
+            setTimeout(() => alert.classList.add('d-none'), 2000);
+        });
+
+        // "OK, I Will Pay" button also processes the investment
+        document.getElementById('okWillPayBtn').addEventListener('click', function() {
+            const amount = parseFloat(sessionStorage.getItem('pendingInvestmentAmount'));
+            const cryptoType = sessionStorage.getItem('pendingCryptoType');
+            if (!amount || !cryptoType) return;
+
+            // Add investment (same as Confirm Payment Received)
+            const today = new Date();
+            const dateStr = today.toISOString().slice(0,10);
+            const estimatedReturn = +(amount * 0.06).toFixed(2);
+            let investments = getInvestments();
+            investments.unshift({
+                date: dateStr,
+                amount: amount,
+                return: estimatedReturn,
+                status: 'Active'
+            });
+            saveInvestments(investments);
+            renderInvestments();
+            updateTotals();
+
+            // Clean up sessionStorage and UI
+            sessionStorage.removeItem('pendingInvestmentAmount');
+            sessionStorage.removeItem('pendingCryptoType');
+            confirmBtn.classList.add('d-none');
+
+            // Show success alert
             const alert = document.getElementById('formAlert');
             alert.classList.remove('d-none');
             setTimeout(() => alert.classList.add('d-none'), 2000);
