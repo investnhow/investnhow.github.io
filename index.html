@@ -521,7 +521,6 @@
 
         // --- Payment Handling: Multi-Crypto (Demo) ---
         let paymentDetails = {};
-        let paymentSimulateTimeout = null;
 
         document.getElementById('investmentForm').onsubmit = function(e) {
             e.preventDefault();
@@ -544,14 +543,20 @@
             };
             const address = fakeAddresses[cryptoType];
             let qrValue = "";
+            let uri = "";
             if (cryptoType === "BTC") {
-                qrValue = `bitcoin:${address}?amount=${(amount/50000).toFixed(6)}`;
+                const btcAmount = (amount/50000).toFixed(6);
+                qrValue = `bitcoin:${address}?amount=${btcAmount}`;
+                uri = qrValue;
             } else if (cryptoType === "ETH") {
-                qrValue = `ethereum:${address}?value=${(amount/3500).toFixed(6)}`;
+                const ethAmount = (amount/3500).toFixed(6);
+                qrValue = `ethereum:${address}?value=${ethAmount}`;
+                uri = qrValue;
             } else {
                 qrValue = address;
+                uri = `ethereum:${address}`;
             }
-            paymentDetails = { address, amount, cryptoType, qrValue };
+            paymentDetails = { address, amount, cryptoType, qrValue, uri };
 
             // Show modal with payment instructions
             const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
@@ -578,6 +583,10 @@
         };
 
         document.getElementById('okWillPayBtn').addEventListener('click', function() {
+            // Redirect to wallet app with prefilled address (and amount if supported)
+            if (paymentDetails && paymentDetails.uri) {
+                window.location.href = paymentDetails.uri;
+            }
             // Simulate payment detection
             document.getElementById('cryptoPaymentDetails').innerHTML = `
                 <div class="my-3">
@@ -587,8 +596,7 @@
                 </div>
             `;
             document.getElementById('okWillPayBtn').disabled = true;
-            // Simulate 6-10s "blockchain confirmation"
-            paymentSimulateTimeout = setTimeout(simulatePaymentDetected, 6000 + Math.random()*4000);
+            setTimeout(simulatePaymentDetected, 6000 + Math.random()*4000);
         });
 
         function simulatePaymentDetected() {
@@ -603,7 +611,6 @@
             const today = new Date();
             const dateStr = today.toISOString().slice(0,10);
             const amount = paymentDetails.amount;
-            const cryptoType = paymentDetails.cryptoType;
             const estimatedReturn = +(amount * 0.06).toFixed(2);
             let investments = getInvestments();
             investments.unshift({
