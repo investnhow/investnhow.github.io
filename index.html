@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>InvestNow - Secure Investment Platform</title>
+    <title>InvestNow - Multi-Crypto Investment Platform</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -338,6 +338,7 @@
         }
         function getInvestments() {
             if (!currentUser) return [];
+            // In production, fetch from backend (AJAX)
             return JSON.parse(localStorage.getItem('investments_' + currentUser) || '[]');
         }
         function saveInvestments(investments) {
@@ -461,7 +462,6 @@
                 currentUser = username;
                 renderNav();
                 navigateTo('dashboard');
-                // Show modal or welcome message if needed
             } else {
                 const alert = document.getElementById('login-alert');
                 alert.innerText = "Invalid username or password.";
@@ -486,7 +486,6 @@
             currentUser = username;
             renderNav();
             navigateTo('dashboard');
-            // Show modal or welcome message if needed
         };
 
         function logout() {
@@ -521,7 +520,10 @@
             document.getElementById('totalReturns').innerText = '$' + totalReturn.toLocaleString(undefined, {minimumFractionDigits:2});
         }
 
-        // --- Payment Handling: BTC, ETH, USDT ---
+        // --- Payment Handling: Multi-Crypto ---
+        let lastInvoiceId = null;
+        let paymentCheckInterval = null;
+
         document.getElementById('investmentForm').onsubmit = function(e) {
             e.preventDefault();
             const amountInput = document.getElementById('amount');
@@ -535,55 +537,121 @@
             sessionStorage.setItem('pendingInvestmentAmount', amount);
             sessionStorage.setItem('pendingCryptoType', cryptoType);
 
-            // Show crypto payment modal
+            // Show modal with loading spinner
             const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
-            let html = `
-                <div>
-                    <p>To complete your investment, click <strong>OK, I Will Pay</strong> below. You will be redirected to a secure Bitcoin payment gateway.</p>
-                    <p><em>Your investment will reflect in your dashboard after payment is confirmed automatically.</em></p>
+            document.getElementById('cryptoPaymentDetails').innerHTML = `
+                <div class="my-3">
+                    <div class="spinner-border text-success" role="status"></div>
+                    <div>Generating payment instructions...</div>
                 </div>
             `;
-            document.getElementById('cryptoPaymentDetails').innerHTML = html;
             document.getElementById('cryptoQR').style.display = 'none';
             modal.show();
+
+            // Request invoice from backend
+            fetch('/api/create-invoice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: amount,
+                    currency: 'usd',
+                    crypto: cryptoType,
+                    user: currentUser
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.address && data.amount && data.invoice_id) {
+                    lastInvoiceId = data.invoice_id;
+                    let html = `
+                        <div>
+                            <p>Send exactly <strong>${data.amount} ${cryptoType}</strong> to this address:</p>
+                            <div class="wallet-address">${data.address}</div>
+                            <p>Or scan the QR code below with your ${cryptoType} wallet app.</p>
+                            <p><small>After payment is received and confirmed on the blockchain, your investment will appear automatically in your dashboard.</small></p>
+                        </div>
+                    `;
+                    document.getElementById('cryptoPaymentDetails').innerHTML = html;
+                    // Show QR code
+                    if (window.QRious) {
+                        let qrValue = data.qr || `${data.address}`;
+                        const qr = new QRious({
+                            element: document.getElementById('cryptoQR'),
+                            value: qrValue,
+                            size: 180
+                        });
+                        document.getElementById('cryptoQR').style.display = 'block';
+                    }
+                    // Enable OK button
+                    document.getElementById('okWillPayBtn').disabled = false;
+                } else {
+                    document.getElementById('cryptoPaymentDetails').innerHTML = `<div class="alert alert-danger">Failed to generate payment instructions. Please try again.</div>`;
+                    document.getElementById('okWillPayBtn').disabled = true;
+                }
+            }).catch(() => {
+                document.getElementById('cryptoPaymentDetails').innerHTML = `<div class="alert alert-danger">Failed to generate payment instructions. Please try again.</div>`;
+                document.getElementById('okWillPayBtn').disabled = true;
+            });
         };
 
-        // --- OK, I Will Pay Button Logic ---
-        document.getElementById('okWillPayBtn').addEventListener('click', async function() {
-            const amount = parseFloat(sessionStorage.getItem('pendingInvestmentAmount'));
-            const cryptoType = sessionStorage.getItem('pendingCryptoType');
-            if (!amount || !cryptoType) return;
-            if (cryptoType !== "BTC") {
-                alert("Automatic payment detection is only available for Bitcoin at this time.");
+        document.getElementById('okWillPayBtn').addEventListener('click', function() {
+            if (!lastInvoiceId) {
+                alert("No payment invoice found. Please try again.");
                 return;
             }
+            // Start polling for payment detection
+            document.getElementById('cryptoPaymentDetails').innerHTML = `
+                <div class="my-3">
+                    <div class="spinner-border text-success" role="status"></div>
+                    <div>Waiting for payment confirmation...</div>
+                    <div class="mt-2 small">Please complete the crypto payment in your wallet. This window will close automatically when payment is detected.</div>
+                </div>
+            `;
+            document.getElementById('okWillPayBtn').disabled = true;
+            // Poll every 10 seconds
+            if (paymentCheckInterval) clearInterval(paymentCheckInterval);
+            paymentCheckInterval = setInterval(checkPaymentStatus, 10000);
+            checkPaymentStatus();
+        });
 
-            // Call your backend to create a BTC invoice
-            try {
-                // Replace '/api/create-btc-invoice' with your actual backend endpoint
-                const response = await fetch('/api/create-btc-invoice', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        amount: amount,
-                        currency: 'usd', // or your base currency
-                        user: currentUser // pass user info if needed
-                    })
-                });
-                const data = await response.json();
-                if (data && data.payment_url) {
-                    // Optionally, close the modal
+        function checkPaymentStatus() {
+            if (!lastInvoiceId) return;
+            fetch(`/api/check-payment?invoice_id=${encodeURIComponent(lastInvoiceId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.paid) {
+                    clearInterval(paymentCheckInterval);
+                    paymentCheckInterval = null;
+                    // Optionally close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('cryptoPaymentModal'));
                     if (modal) modal.hide();
-                    // Redirect to the payment gateway
-                    window.location.href = data.payment_url;
-                } else {
-                    alert("Failed to create Bitcoin payment. Please try again.");
+                    // Show investment added message
+                    const alert = document.getElementById('formAlert');
+                    alert.classList.remove('d-none');
+                    setTimeout(() => alert.classList.add('d-none'), 2000);
+                    // Optionally refresh investments from backend here
+                    // For demo, we add it to localStorage
+                    const today = new Date();
+                    const dateStr = today.toISOString().slice(0,10);
+                    const amount = parseFloat(sessionStorage.getItem('pendingInvestmentAmount'));
+                    const cryptoType = sessionStorage.getItem('pendingCryptoType');
+                    const estimatedReturn = +(amount * 0.06).toFixed(2);
+                    let investments = getInvestments();
+                    investments.unshift({
+                        date: dateStr,
+                        amount: amount,
+                        return: estimatedReturn,
+                        status: 'Active'
+                    });
+                    saveInvestments(investments);
+                    renderInvestments();
+                    updateTotals();
+                    sessionStorage.removeItem('pendingInvestmentAmount');
+                    sessionStorage.removeItem('pendingCryptoType');
+                    lastInvoiceId = null;
                 }
-            } catch (err) {
-                alert("Error creating payment: " + err.message);
-            }
-        });
+            });
+        }
 
         // --- Footer Quick Links Navigation ---
         function attachFooterLinks() {
@@ -615,5 +683,7 @@
             showSection(hash);
         };
     </script>
+    <!-- QRious for QR code generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 </body>
 </html>
