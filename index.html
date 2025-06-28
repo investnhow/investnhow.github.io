@@ -42,6 +42,20 @@
             .dashboard-card, .landing-hero { padding: 1rem; }
             h2 { font-size: 1.5rem; }
         }
+        /* Crypto Payment Modal Styles */
+        #cryptoPaymentModal .modal-body {
+            text-align: center;
+        }
+        #cryptoQR {
+            margin: 1rem auto;
+            display: block;
+        }
+        .wallet-address {
+            font-family: monospace;
+            font-size: 1.1em;
+            word-break: break-all;
+            margin: 0.5em 0;
+        }
     </style>
 </head>
 <body>
@@ -271,8 +285,29 @@
       </div>
     </div>
 
+    <!-- Crypto Payment Modal -->
+    <div class="modal fade" id="cryptoPaymentModal" tabindex="-1" aria-labelledby="cryptoPaymentModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title text-success" id="cryptoPaymentModalLabel">Crypto Payment Instructions</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="cryptoPaymentDetails"></div>
+            <canvas id="cryptoQR" width="180" height="180" style="display:none;"></canvas>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary w-100" data-bs-dismiss="modal">OK, I Will Pay</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- QRCode.js for generating QR codes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script>
         // --- Available Investment Plans ---
         const availableInvestments = [
@@ -526,7 +561,7 @@
             document.getElementById('totalReturns').innerText = '$' + totalReturn.toLocaleString(undefined, {minimumFractionDigits:2});
         }
 
-        // Payment Handling
+        // --- Payment Handling (Crypto Wallet) ---
         document.getElementById('investmentForm').onsubmit = function(e) {
             e.preventDefault();
             const amountInput = document.getElementById('amount');
@@ -540,10 +575,34 @@
             // Store pending amount
             sessionStorage.setItem('pendingInvestmentAmount', amount);
 
-            // Redirect to CashApp
-            const cashAppTag = "$YourCashAppTag"; // REPLACE WITH YOUR CASHAPP TAG
-            const cashAppUrl = `https://cash.app/${cashAppTag}/${amount}`;
-            window.location.href = cashAppUrl;
+            // Crypto payment instructions
+            const btcAddress = "1YourBitcoinWalletAddressHere"; // <-- REPLACE with your BTC address
+            const btcUsdRate = 50000; // Example BTC/USD rate, update as needed
+            const btcAmount = (amount / btcUsdRate).toFixed(6);
+
+            // Show crypto payment modal
+            const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
+            let html = `
+                <div>
+                    <p>Send exactly <strong>${btcAmount} BTC</strong> (≈ $${amount}) to this wallet address:</p>
+                    <div class="wallet-address">${btcAddress}</div>
+                    <p>After sending, click <strong>Confirm Payment Received</strong> below.</p>
+                </div>
+            `;
+            document.getElementById('cryptoPaymentDetails').innerHTML = html;
+
+            // Generate QR code
+            const qr = new QRious({
+                element: document.getElementById('cryptoQR'),
+                value: `bitcoin:${btcAddress}?amount=${btcAmount}`,
+                size: 180
+            });
+            document.getElementById('cryptoQR').style.display = 'block';
+
+            modal.show();
+
+            // Show confirm button
+            confirmBtn.classList.remove('d-none');
         };
 
         // Payment Confirmation
@@ -561,7 +620,9 @@
             const amount = parseFloat(sessionStorage.getItem('pendingInvestmentAmount'));
             if (!amount) return alert("No pending investment found.");
 
-            const confirmed = confirm(`Have you completed the payment of $${amount.toFixed(2)} to CashApp?`);
+            const confirmed = confirm(
+                `Have you completed the crypto payment (≈ $${amount.toFixed(2)}) to the provided wallet address?`
+            );
             if (!confirmed) return;
 
             const today = new Date();
