@@ -276,14 +276,13 @@
     <!-- QRious for QR code generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script>
-        // --- Updated Available Investment Plans ---
         const availableInvestments = [
             {
                 id: 1,
                 name: "Fixed Income Plan",
                 description: "Earn 12% interest over 3 months. Minimum $100.",
                 minAmount: 100,
-                rate: 0.12,  // 12% for 3 months
+                rate: 0.12,
                 durationMonths: 3
             },
             {
@@ -291,7 +290,7 @@
                 name: "Growth Fund",
                 description: "Projected 20% return over 6 months. Minimum $100.",
                 minAmount: 100,
-                rate: 0.20,  // 20% for 6 months
+                rate: 0.20,
                 durationMonths: 6
             },
             {
@@ -299,7 +298,7 @@
                 name: "Short-Term Bond",
                 description: "8% return over 2 months. Minimum $100.",
                 minAmount: 100,
-                rate: 0.08,  // 8% for 2 months
+                rate: 0.08,
                 durationMonths: 2
             }
         ];
@@ -336,7 +335,6 @@
             });
         }
 
-        // --- State Management ---
         let currentUser = null;
 
         function getUsers() {
@@ -365,7 +363,6 @@
             return localStorage.getItem('currentUser');
         }
 
-        // --- Navigation ---
         function renderNav() {
             const navLinks = document.getElementById('nav-links');
             navLinks.innerHTML = '';
@@ -402,7 +399,6 @@
             }
         }
 
-        // --- Section Display ---
         function showSection(section) {
             document.getElementById('landing-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'none';
@@ -431,7 +427,6 @@
             }
         }
 
-        // --- SPA Navigation with Hash ---
         function navigateTo(section) {
             let hash = '';
             if (section === 'landing' || section === 'home') hash = '#home';
@@ -452,7 +447,15 @@
 
         window.addEventListener('hashchange', handleHashChange);
 
-        // --- Login ---
+        document.getElementById('show-signup').onclick = function(e) {
+            e.preventDefault();
+            navigateTo('signup');
+        };
+        document.getElementById('show-login').onclick = function(e) {
+            e.preventDefault();
+            navigateTo('login');
+        };
+
         document.getElementById('loginForm').onsubmit = function(e) {
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim().toLowerCase();
@@ -471,7 +474,7 @@
             }
         };
 
-        // --- Signup with Formspree AJAX submission ---
+        // Signup form submission with Formspree AJAX
         document.getElementById('signupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const form = e.target;
@@ -483,7 +486,6 @@
                 return;
             }
 
-            // Check if user already exists locally (for demo)
             const users = getUsers();
             if (users[email]) {
                 alert("Email already registered.");
@@ -500,7 +502,6 @@
 
                 if (response.ok) {
                     alert('Thank you for signing up! Please check your email for verification.');
-                    // Save user locally as verified for demo purposes
                     users[email] = { fullName: fullName, verified: true };
                     saveUsers(users);
                     setCurrentUser(email);
@@ -529,7 +530,6 @@
             navigateTo('landing');
         }
 
-        // --- Investments ---
         function renderInvestments() {
             const table = document.getElementById('investmentTable');
             const investments = getInvestments();
@@ -555,7 +555,6 @@
             document.getElementById('totalReturns').innerText = '$' + totalReturn.toLocaleString(undefined, {minimumFractionDigits:2});
         }
 
-        // --- Payment Handling: BTC, ETH, USDT ---
         let currentPaymentUri = "";
         let currentCryptoType = "";
 
@@ -588,7 +587,6 @@
             sessionStorage.setItem('pendingCryptoType', cryptoType);
             sessionStorage.setItem('pendingPlanId', planId);
 
-            // Wallet addresses and rates as before...
             const wallets = {
                 BTC: {
                     address: "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P",
@@ -645,7 +643,6 @@
             confirmBtn.classList.remove('d-none');
         };
 
-        // Proceed button logic
         document.getElementById('proceedPaymentBtn').onclick = function() {
             if (currentCryptoType === "BTC" || currentCryptoType === "ETH") {
                 window.location.href = currentPaymentUri;
@@ -663,7 +660,6 @@
             }
         };
 
-        // Payment Confirmation
         const confirmBtn = document.getElementById('confirmPaymentBtn');
         window.addEventListener('load', () => {
             const pendingAmount = sessionStorage.getItem('pendingInvestmentAmount');
@@ -693,7 +689,6 @@
 
             const today = new Date();
             const dateStr = today.toISOString().slice(0,10);
-            // Use plan.rate for estimated return
             const estimatedReturn = +(amount * plan.rate).toFixed(2);
             let investments = getInvestments();
             investments.unshift({
@@ -717,7 +712,6 @@
             setTimeout(() => alert.classList.add('d-none'), 2000);
         });
 
-        // --- Footer Quick Links Navigation ---
         function attachFooterLinks() {
             document.querySelectorAll('.footer-link').forEach(link => {
                 link.addEventListener('click', e => {
@@ -728,7 +722,6 @@
             });
         }
 
-        // --- App Initialization ---
         document.getElementById('get-started-btn').onclick = function() {
             navigateTo('signup');
         };
