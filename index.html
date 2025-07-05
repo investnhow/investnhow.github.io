@@ -409,7 +409,7 @@ function renderInvestmentPlans() {
   });
 }
 
-// --- Modal: On Confirm, record investment and redirect to wallet ---
+// --- Modal with only Confirm Investment, cannot be closed except by confirming ---
 function openInvestModal(planId) {
   const plan = investmentPlans.find(p => p.id === planId);
   if (!plan) return;
@@ -450,7 +450,7 @@ function openInvestModal(planId) {
               <div id="invest-error" class="text-danger d-none mt-3"></div>
             </div>
             <div class="modal-footer">
-              <button type="submit" class="btn btn-success w-100">Proceed to Payment</button>
+              <button type="submit" class="btn btn-success w-100">Confirm Investment</button>
             </div>
           </form>
         </div>
@@ -461,6 +461,7 @@ function openInvestModal(planId) {
   if (existingModal) existingModal.remove();
   document.body.insertAdjacentHTML('beforeend', modalHtml);
 
+  // Prevent closing modal by clicking outside or pressing ESC
   const investModal = new bootstrap.Modal(document.getElementById('investModal'), {
     backdrop: 'static',
     keyboard: false
@@ -515,20 +516,10 @@ function openInvestModal(planId) {
     const selected = walletAddresses[paymentSelect.value];
     let uri = '';
     switch(paymentSelect.value) {
-      case 'BTC':
-        uri = `bitcoin:${selected.address}`;
-        break;
-      case 'ETH':
-        uri = `ethereum:${selected.address}`;
-        break;
-      case 'USDT':
-        uri = `tron:${selected.address}`;
-        setTimeout(() => {
-          window.open(`https://tronscan.org/#/address/${selected.address}`, '_blank');
-        }, 1500);
-        break;
+      case 'BTC': uri = `bitcoin:${selected.address}`; break;
+      case 'ETH': uri = `ethereum:${selected.address}`; break;
+      case 'USDT': uri = `https://tronscan.org/#/address/${selected.address}`; break;
     }
-    // Record the investment immediately
     const investments = getUserInvestments(currentUser);
     investments.push({
       planId: plan.id,
@@ -537,9 +528,10 @@ function openInvestModal(planId) {
       paymentMethod: paymentSelect.value
     });
     saveUserInvestments(currentUser, investments);
+    const investModal = bootstrap.Modal.getInstance(document.getElementById('investModal'));
     if(investModal) investModal.hide();
-    renderDashboard();
     window.location.href = uri;
+    renderDashboard();
   });
 }
 
@@ -583,6 +575,7 @@ document.getElementById('verify-btn').addEventListener('click', function() {
     return;
   }
   document.getElementById('verification-error').classList.add('d-none');
+  // Prepare form data for Formspree
   const formData = new FormData();
   formData.append('fullName', signupData.fullName);
   formData.append('email', signupData.email);
@@ -616,6 +609,7 @@ document.getElementById('verify-btn').addEventListener('click', function() {
   });
 });
 
+// --- Login and Navigation ---
 document.getElementById('loginForm').addEventListener('submit', function(e) {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim().toLowerCase();
