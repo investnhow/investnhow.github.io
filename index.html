@@ -408,18 +408,17 @@ function renderInvestmentPlans() {
     });
   });
 }
-
-// --- Modal with only Confirm Investment, cannot be closed except by confirming ---
 function openInvestModal(planId) {
   const plan = investmentPlans.find(p => p.id === planId);
   if (!plan) return;
   let modalHtml = `
-    <div class="modal fade" id="investModal" tabindex="-1" aria-labelledby="investModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal fade" id="investModal" tabindex="-1" aria-labelledby="investModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <form id="investForm">
             <div class="modal-header">
               <h5 class="modal-title text-success" id="investModalLabel">Invest in ${plan.name}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <p>${plan.description}</p>
@@ -450,7 +449,8 @@ function openInvestModal(planId) {
               <div id="invest-error" class="text-danger d-none mt-3"></div>
             </div>
             <div class="modal-footer">
-              <button type="submit" class="btn btn-success w-100">Confirm Investment</button>
+              <button type="submit" class="btn btn-success">Confirm Investment</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             </div>
           </form>
         </div>
@@ -460,14 +460,8 @@ function openInvestModal(planId) {
   const existingModal = document.getElementById('investModal');
   if (existingModal) existingModal.remove();
   document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-  // Prevent closing modal by clicking outside or pressing ESC
-  const investModal = new bootstrap.Modal(document.getElementById('investModal'), {
-    backdrop: 'static',
-    keyboard: false
-  });
+  const investModal = new bootstrap.Modal(document.getElementById('investModal'));
   investModal.show();
-
   const paymentSelect = document.getElementById('payment-method');
   paymentSelect.addEventListener('change', () => {
     const val = paymentSelect.value;
@@ -491,7 +485,6 @@ function openInvestModal(planId) {
       walletQRElem.src = '';
     }
   });
-
   document.getElementById('investForm').addEventListener('submit', e => {
     e.preventDefault();
     const amountInput = document.getElementById('invest-amount');
