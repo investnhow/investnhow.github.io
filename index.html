@@ -409,7 +409,7 @@ function renderInvestmentPlans() {
   });
 }
 
-// --- Modal: On Confirm, redirect to wallet, but only record after "I Have Paid" ---
+// --- Modal: On Confirm, record investment and redirect to wallet ---
 function openInvestModal(planId) {
   const plan = investmentPlans.find(p => p.id === planId);
   if (!plan) return;
@@ -528,72 +528,20 @@ function openInvestModal(planId) {
         }, 1500);
         break;
     }
-    sessionStorage.setItem('pendingInvestment', JSON.stringify({
-      planId: plan.id,
-      amount,
-      paymentMethod: paymentSelect.value,
-      startDate: new Date().toISOString()
-    }));
-    if(investModal) investModal.hide();
-    window.location.href = uri;
-    setTimeout(showConfirmPaymentModal, 2000);
-  });
-}
-
-function showConfirmPaymentModal() {
-  const pending = sessionStorage.getItem('pendingInvestment');
-  if (!pending) return;
-  const inv = JSON.parse(pending);
-  let plan = investmentPlans.find(p => p.id === inv.planId);
-  if (!plan) return;
-  let modalHtml = `
-    <div class="modal fade" id="confirmPaymentModal" tabindex="-1" aria-labelledby="confirmPaymentModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title text-success" id="confirmPaymentModalLabel">Confirm Your Investment</h5>
-          </div>
-          <div class="modal-body">
-            <p>Please confirm you have completed your payment for:</p>
-            <ul>
-              <li><strong>Plan:</strong> ${plan.name}</li>
-              <li><strong>Amount:</strong> $${parseFloat(inv.amount).toFixed(2)}</li>
-              <li><strong>Payment Method:</strong> ${inv.paymentMethod}</li>
-            </ul>
-            <div id="confirm-payment-error" class="text-danger d-none"></div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-success w-100" id="confirm-payment-btn">I Have Paid</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-  const existingModal = document.getElementById('confirmPaymentModal');
-  if (existingModal) existingModal.remove();
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-  const confirmModal = new bootstrap.Modal(document.getElementById('confirmPaymentModal'), {
-    backdrop: 'static',
-    keyboard: false
-  });
-  confirmModal.show();
-  document.getElementById('confirm-payment-btn').onclick = function() {
+    // Record the investment immediately
     const investments = getUserInvestments(currentUser);
     investments.push({
-      planId: inv.planId,
-      amount: parseFloat(inv.amount),
-      startDate: inv.startDate,
-      paymentMethod: inv.paymentMethod
+      planId: plan.id,
+      amount,
+      startDate: new Date().toISOString(),
+      paymentMethod: paymentSelect.value
     });
     saveUserInvestments(currentUser, investments);
-    sessionStorage.removeItem('pendingInvestment');
-    confirmModal.hide();
+    if(investModal) investModal.hide();
     renderDashboard();
-    alert('Your investment has been recorded!');
-  };
+    window.location.href = uri;
+  });
 }
-window.addEventListener('load', showConfirmPaymentModal);
-window.addEventListener('focus', showConfirmPaymentModal);
 
 // --- Signup Form Verification and Formspree AJAX Submission ---
 document.getElementById('signupForm').addEventListener('submit', function(e) {
