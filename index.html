@@ -2,12 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>InvestNow - Secure Investment Platform</title>
+<title>InvestNHow - Secure Investment Platform</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <!-- Bootstrap 5 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<!-- Font Awesome for icons -->
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+/>
 <style>
   body { background: #f4f7fa; }
   .dashboard-card { background: #fff; border-radius: 14px; padding: 2rem; box-shadow: 0 2px 16px rgba(0,0,0,0.07);}
@@ -22,7 +25,7 @@
 <!-- Navigation Bar -->
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
   <div class="container">
-    <a class="navbar-brand fw-bold text-success" href="#home" id="nav-home"><i class="fas fa-chart-line"></i> InvestNow</a>
+    <a class="navbar-brand fw-bold text-success" href="#home" id="nav-home"><i class="fas fa-chart-line"></i> InvestNHow</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -35,7 +38,7 @@
 <!-- Landing Section -->
 <div class="container my-5" id="landing-section">
   <div class="landing-hero text-center mb-4">
-    <h1 class="display-5 fw-bold mb-3">Grow Your Wealth with InvestNow</h1>
+    <h1 class="display-5 fw-bold mb-3">Grow Your Wealth with InvestNHow</h1>
     <p class="lead mb-4">Simple, secure, and transparent investment opportunities. Track your returns and manage your portfolio in real time.</p>
     <button class="btn btn-success btn-lg px-5" id="get-started-btn"><i class="fas fa-play-circle"></i> Get Started</button>
   </div>
@@ -192,7 +195,7 @@
   <div class="container py-4">
     <div class="row align-items-center">
       <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
-        <span class="fw-bold text-success fs-5"><i class="fas fa-chart-line"></i> InvestNow</span>
+        <span class="fw-bold text-success fs-5"><i class="fas fa-chart-line"></i> InvestNHow</span>
         <span class="d-block small text-muted mt-1">Your trusted platform for secure and transparent investments.</span>
       </div>
       <div class="col-md-4 text-center mb-3 mb-md-0">
@@ -211,11 +214,12 @@
       </div>
     </div>
     <hr class="my-3" />
-    <div class="text-center small text-muted">&copy; 2025 InvestNow. All rights reserved.</div>
+    <div class="text-center small text-muted">&copy; 2025 InvestNHow. All rights reserved.</div>
   </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <script>
   // Investment plans
   const availableInvestments = [
@@ -427,7 +431,221 @@
     navigateTo('landing');
   }
 
-  // Investment and payment code omitted for brevity; integrate your existing logic here.
+  // --- Investments ---
+
+  function renderAvailableInvestments() {
+    const container = document.getElementById('availableInvestmentsList');
+    if (!container) return;
+    container.innerHTML = '';
+    availableInvestments.forEach(plan => {
+      container.innerHTML += `
+        <div class="col-md-4 mb-3">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title text-success">${plan.name}</h5>
+              <p class="card-text flex-grow-1">${plan.description}</p>
+              <div class="mb-2"><small>Min: $${plan.minAmount.toLocaleString()}</small></div>
+              <button class="btn btn-outline-success w-100 invest-btn" 
+                  data-id="${plan.id}" 
+                  data-min="${plan.minAmount}" 
+                  data-rate="${plan.rate}">
+                  Invest in this
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    document.querySelectorAll('.invest-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.getElementById('investmentPlan').value = this.getAttribute('data-id');
+        document.getElementById('amount').value = this.getAttribute('data-min');
+        document.getElementById('amount').focus();
+      });
+    });
+  }
+
+  function renderInvestments() {
+    const table = document.getElementById('investmentTable');
+    const investments = getInvestments();
+    table.innerHTML = '';
+    investments.forEach(inv => {
+      table.innerHTML += `
+        <tr>
+          <td>${inv.date}</td>
+          <td>$${inv.amount.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+          <td>$${inv.return.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+          <td>${inv.planName || ''}</td>
+          <td><span class="badge ${inv.status === 'Active' ? 'bg-success' : 'bg-secondary'}">${inv.status}</span></td>
+        </tr>
+      `;
+    });
+  }
+
+  function updateTotals() {
+    const investments = getInvestments();
+    let totalInvested = investments.reduce((sum, inv) => sum + inv.amount, 0);
+    let totalReturn = investments.reduce((sum, inv) => sum + inv.return, 0);
+    document.getElementById('totalInvested').innerText = '$' + totalInvested.toLocaleString(undefined, {minimumFractionDigits:2});
+    document.getElementById('totalReturns').innerText = '$' + totalReturn.toLocaleString(undefined, {minimumFractionDigits:2});
+  }
+
+  let currentPaymentUri = "";
+  let currentCryptoType = "";
+
+  document.getElementById('investmentForm').onsubmit = function(e) {
+    e.preventDefault();
+    const planId = document.getElementById('investmentPlan').value;
+    const amountInput = document.getElementById('amount');
+    const cryptoType = document.getElementById('cryptoType').value;
+    const amount = parseFloat(amountInput.value);
+
+    if (!planId) {
+      alert('Please select an investment plan.');
+      return;
+    }
+
+    const plan = availableInvestments.find(p => p.id.toString() === planId);
+    if (!plan) {
+      alert('Invalid investment plan selected.');
+      return;
+    }
+
+    if (isNaN(amount) || amount < plan.minAmount) {
+      alert(`Amount must be at least $${plan.minAmount}`);
+      amountInput.classList.add('is-invalid');
+      return;
+    }
+    amountInput.classList.remove('is-invalid');
+
+    sessionStorage.setItem('pendingInvestmentAmount', amount);
+    sessionStorage.setItem('pendingCryptoType', cryptoType);
+    sessionStorage.setItem('pendingPlanId', planId);
+
+    const wallets = {
+      BTC: {
+        address: "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P",
+        usdRate: 50000
+      },
+      ETH: {
+        address: "0xced6ec6ec624b561483822768b8af6bad3777aee",
+        usdRate: 3500
+      },
+      USDT: {
+        address: "0xced6ec6ec624b561483822768b8af6bad3777aee",
+        usdRate: 1
+      }
+    };
+
+    const selected = wallets[cryptoType];
+    let cryptoAmount = (amount / selected.usdRate).toFixed(6);
+    let paymentUri = "";
+    let cryptoName = "";
+    if (cryptoType === "BTC") {
+      paymentUri = `bitcoin:${selected.address}?amount=${cryptoAmount}`;
+      cryptoName = "Bitcoin (BTC)";
+    } else if (cryptoType === "ETH") {
+      paymentUri = `ethereum:${selected.address}?value=${cryptoAmount}`;
+      cryptoName = "Ethereum (ETH)";
+    } else if (cryptoType === "USDT") {
+      paymentUri = selected.address;
+      cryptoName = "Tether (USDT-ERC20)";
+    }
+
+    currentPaymentUri = paymentUri;
+    currentCryptoType = cryptoType;
+
+    const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
+    let html = `
+      <div>
+        <p>Send exactly <strong>${cryptoAmount} ${cryptoType}</strong> (≈ $${amount}) to this wallet address:</p>
+        <div class="wallet-address">${selected.address}</div>
+        <p>Or scan the QR code below with your ${cryptoName} wallet app.</p>
+        <p>After sending, click <strong>Confirm Payment Received</strong> below.</p>
+      </div>
+    `;
+    document.getElementById('cryptoPaymentDetails').innerHTML = html;
+
+    let qrValue = (cryptoType === "BTC" || cryptoType === "ETH") ? paymentUri : selected.address;
+    const qr = new QRious({
+      element: document.getElementById('cryptoQR'),
+      value: qrValue,
+      size: 180
+    });
+    document.getElementById('cryptoQR').style.display = 'block';
+
+    modal.show();
+    confirmBtn.classList.remove('d-none');
+  };
+
+  document.getElementById('proceedPaymentBtn').onclick = function() {
+    if (currentCryptoType === "BTC" || currentCryptoType === "ETH") {
+      window.location.href = currentPaymentUri;
+    } else if (currentCryptoType === "USDT") {
+      const address = document.querySelector('#cryptoPaymentDetails .wallet-address').innerText;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(address).then(function() {
+          alert("USDT wallet address copied to clipboard. Please paste it in your crypto app.");
+        }, function() {
+          alert("Copy the wallet address manually: " + address);
+        });
+      } else {
+        alert("Copy the wallet address manually: " + address);
+      }
+    }
+  };
+
+  const confirmBtn = document.getElementById('confirmPaymentBtn');
+  window.addEventListener('load', () => {
+    const pendingAmount = sessionStorage.getItem('pendingInvestmentAmount');
+    if (pendingAmount) {
+      confirmBtn.classList.remove('d-none');
+    } else {
+      confirmBtn.classList.add('d-none');
+    }
+  });
+
+  confirmBtn.addEventListener('click', () => {
+    const amount = parseFloat(sessionStorage.getItem('pendingInvestmentAmount'));
+    const cryptoType = sessionStorage.getItem('pendingCryptoType');
+    const planId = sessionStorage.getItem('pendingPlanId');
+    if (!amount || !cryptoType || !planId) return alert("No pending investment found.");
+
+    const confirmed = confirm(
+      `Have you completed the crypto payment (≈ $${amount.toFixed(2)}) in ${cryptoType} to the provided wallet address?`
+    );
+    if (!confirmed) return;
+
+    const plan = availableInvestments.find(p => p.id.toString() === planId);
+    if (!plan) {
+      alert("Invalid investment plan.");
+      return;
+    }
+
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0,10);
+    const estimatedReturn = +(amount * plan.rate).toFixed(2);
+    let investments = getInvestments();
+    investments.unshift({
+      date: dateStr,
+      amount: amount,
+      return: estimatedReturn,
+      status: 'Active',
+      planName: plan.name
+    });
+    saveInvestments(investments);
+    renderInvestments();
+    updateTotals();
+
+    sessionStorage.removeItem('pendingInvestmentAmount');
+    sessionStorage.removeItem('pendingCryptoType');
+    sessionStorage.removeItem('pendingPlanId');
+    confirmBtn.classList.add('d-none');
+
+    const alert = document.getElementById('formAlert');
+    alert.classList.remove('d-none');
+    setTimeout(() => alert.classList.add('d-none'), 2000);
+  });
 
   // Initialization
   document.getElementById('get-started-btn').onclick = () => navigateTo('signup');
@@ -455,6 +673,25 @@
         <p>A verification code has been generated.</p>
         <p><strong id="modalVerificationCode" style="font-size:1.5rem; letter-spacing: 0.2em; user-select: all; cursor: pointer;"></strong></p>
         <button type="button" class="btn btn-outline-primary w-100" id="copyCodeBtn">Copy & Paste Code</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Crypto Payment Modal -->
+<div class="modal fade" id="cryptoPaymentModal" tabindex="-1" aria-labelledby="cryptoPaymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-success" id="cryptoPaymentModalLabel">Crypto Payment Instructions</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="cryptoPaymentDetails"></div>
+        <canvas id="cryptoQR" width="180" height="180" style="display:none;"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary w-100" id="proceedPaymentBtn">Proceed</button>
       </div>
     </div>
   </div>
