@@ -35,10 +35,6 @@
   .invest-btn:hover { background-color: #145c32; }
   .investment-table th, .investment-table td { vertical-align: middle; font-weight: 500; }
   @media (max-width: 767px) { .dashboard-card { padding: 1.5rem; } }
-  #displayVerificationCode {
-    font-weight: 700; font-size: 1.6rem; letter-spacing: 0.3em;
-    user-select: all; cursor: pointer; color: #198754;
-  }
 </style>
 </head>
 <body>
@@ -82,33 +78,20 @@
   </div>
 </div>
 
-<!-- Signup Section -->
+<!-- Signup Section (Formspree integration) -->
 <div class="container my-5" id="signup-section" style="max-width: 400px; display:none;">
   <div class="card p-4 shadow-sm">
     <h3 class="mb-3">Sign Up</h3>
-    <form id="signupForm">
-      <div id="signup-fields">
-        <div class="mb-3">
-          <label for="signup-fullname" class="form-label">Full Name</label>
-          <input type="text" class="form-control" id="signup-fullname" name="fullName" required />
-        </div>
-        <div class="mb-3">
-          <label for="signup-email" class="form-label">Email</label>
-          <input type="email" class="form-control" id="signup-email" name="email" required />
-        </div>
-        <button type="submit" class="btn btn-success w-100">Sign Up</button>
+    <form id="signupForm" action="https://formspree.io/f/yourformid" method="POST">
+      <div class="mb-3">
+        <label for="signup-fullname" class="form-label">Full Name</label>
+        <input type="text" class="form-control" id="signup-fullname" name="fullName" required />
       </div>
-      <div id="verification-section" class="d-none mt-3">
-        <p>A verification code has been generated.</p>
-        <p><strong id="displayVerificationCode"></strong></p>
-        <button type="button" id="copyCodeBtn" class="btn btn-outline-primary mb-3 w-100">Copy & Paste Code</button>
-        <div class="mb-3">
-          <label for="verification-code" class="form-label">Enter Verification Code</label>
-          <input type="text" id="verification-code" class="form-control" placeholder="Enter code here" />
-          <div id="verification-error" class="text-danger mt-2 d-none">Incorrect code. Please try again.</div>
-        </div>
-        <button type="button" id="verify-btn" class="btn btn-primary w-100">Verify</button>
+      <div class="mb-3">
+        <label for="signup-email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="signup-email" name="email" required />
       </div>
+      <button type="submit" class="btn btn-success w-100">Sign Up</button>
     </form>
     <div class="mt-3 text-center">
       <a href="#login" id="show-login">Already have an account? Log in</a>
@@ -202,19 +185,17 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+// ... All your JS code from before, EXCEPT for the signupForm event listener ...
+// Remove or comment out any JS that intercepts the signup form submit!
 let currentUser = null;
-let signupVerificationCode = null;
-let signupData = null;
 let investmentChart = null;
 
-// Investment plans with very short durations
 const investmentPlans = [
   { id: 'plan-basic', name: 'Basic Plan', minInvestment: 100, maxInvestment: 1000, durationDays: 1, interestRate: 15, description: 'A low-risk plan with steady returns over 1 day.' },
   { id: 'plan-standard', name: 'Standard Plan', minInvestment: 1000, maxInvestment: 5000, durationDays: 3, interestRate: 30, description: 'Balanced plan with moderate risk and higher returns over 3 days.' },
   { id: 'plan-premium', name: 'Premium Plan', minInvestment: 5000, maxInvestment: 20000, durationDays: 5, interestRate: 50, description: 'High-return plan for experienced investors over 5 days.' }
 ];
 
-// Wallet addresses and network info
 const walletAddresses = {
   BTC: { address: '16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P', network: 'Bitcoin' },
   ETH: { address: '0xced6ec6ec624b561483822768b8af6bad3777aee', network: 'Ethereum (ERC20)' },
@@ -264,8 +245,6 @@ function showSection(section) {
     document.getElementById('login-section').style.display = '';
   } else if (section === 'signup') {
     document.getElementById('signup-section').style.display = '';
-    document.getElementById('verification-section').classList.add('d-none');
-    document.getElementById('signup-fields').classList.remove('d-none');
   } else {
     document.getElementById('landing-section').style.display = '';
   }
@@ -322,7 +301,6 @@ function renderDashboard() {
     document.getElementById('total-invested').innerText = `$${totalInvested.toFixed(2)}`;
     document.getElementById('current-value').innerText = `$${(totalInvested + totalReturns).toFixed(2)}`;
     document.getElementById('total-returns').innerText = `$${totalReturns.toFixed(2)}`;
-    // Chart
     const chartLabels = [], chartValues = [];
     const now = new Date();
     for(let i = 29; i >= 0; i--) {
@@ -381,34 +359,6 @@ function renderInvestmentChart(labels, data) {
       },
       interaction: { mode: 'nearest', axis: 'x', intersect: false }
     }
-  });
-}
-function renderInvestmentPlans() {
-  const container = document.getElementById('investment-plans');
-  container.innerHTML = '';
-  investmentPlans.forEach(plan => {
-    const col = document.createElement('div');
-    col.className = 'col-md-4 mb-4';
-    col.innerHTML = `<div class="plan-card p-4 h-100 d-flex flex-column justify-content-between">
-      <div>
-        <h5 class="fw-bold">${plan.name}</h5>
-        <p class="text-muted">${plan.description}</p>
-        <ul class="list-unstyled small mb-3">
-          <li><strong>Min Investment:</strong> $${plan.minInvestment}</li>
-          <li><strong>Max Investment:</strong> $${plan.maxInvestment}</li>
-          <li><strong>Duration:</strong> ${plan.durationDays} days</li>
-          <li><strong>Interest Rate:</strong> ${plan.interestRate}%</li>
-        </ul>
-      </div>
-      <button class="btn btn-success invest-btn" data-plan-id="${plan.id}">Invest Now</button>
-    </div>`;
-    container.appendChild(col);
-  });
-  document.querySelectorAll('.invest-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const planId = btn.getAttribute('data-plan-id');
-      openInvestModal(planId);
-    });
   });
 }
 function openInvestModal(planId) {
@@ -530,63 +480,6 @@ function openInvestModal(planId) {
     renderDashboard();
   });
 }
-document.getElementById('signupForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  if (!document.getElementById('verification-section').classList.contains('d-none')) return;
-  const form = e.target;
-  const fullName = form.fullName.value.trim();
-  const email = form.email.value.trim().toLowerCase();
-  if (!fullName || !email) { alert("Please fill in all required fields."); return; }
-  const users = getUsers();
-  if (users[email]) { alert("Email already registered."); return; }
-  signupVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  signupData = { fullName, email };
-  document.getElementById('displayVerificationCode').innerText = signupVerificationCode;
-  document.getElementById('signup-fields').classList.add('d-none');
-  document.getElementById('verification-section').classList.remove('d-none');
-  document.getElementById('verification-error').classList.add('d-none');
-});
-document.getElementById('copyCodeBtn').addEventListener('click', () => {
-  if (!signupVerificationCode) return;
-  navigator.clipboard.writeText(signupVerificationCode).then(() => {
-    alert("Verification code copied to clipboard.");
-    const verificationInput = document.getElementById('verification-code');
-    verificationInput.value = signupVerificationCode;
-    verificationInput.focus();
-  }, () => {
-    alert("Failed to copy. Please copy the code manually: " + signupVerificationCode);
-  });
-});
-document.getElementById('verify-btn').addEventListener('click', async () => {
-  const inputCode = document.getElementById('verification-code').value.trim();
-  if (inputCode !== signupVerificationCode) {
-    document.getElementById('verification-error').classList.remove('d-none');
-    return;
-  }
-  document.getElementById('verification-error').classList.add('d-none');
-  if (!signupData?.fullName || !signupData?.email) {
-    alert("Signup data missing. Please try again.");
-    return;
-  }
-  try {
-    const users = getUsers();
-    users[signupData.email] = { fullName: signupData.fullName, verified: true };
-    saveUsers(users);
-    setCurrentUser(signupData.email);
-    currentUser = signupData.email;
-    renderNav();
-    navigateTo('dashboard');
-    document.getElementById('signupForm').reset();
-    signupVerificationCode = null;
-    signupData = null;
-    document.getElementById('verification-section').classList.add('d-none');
-    document.getElementById('signup-fields').classList.remove('d-none');
-    alert('Thank you for signing up! You are now logged in.');
-  } catch (error) {
-    alert('Signup failed. Please try again later.');
-    console.error(error);
-  }
-});
 document.getElementById('loginForm').addEventListener('submit', function(e) {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim().toLowerCase();
