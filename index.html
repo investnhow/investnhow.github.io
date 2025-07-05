@@ -198,6 +198,7 @@
                         <th>Date</th>
                         <th>Amount ($)</th>
                         <th>Return ($)</th>
+                        <th>Plan</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -207,6 +208,15 @@
         <div class="mt-4">
             <h4 class="mb-3">Add New Investment</h4>
             <form id="investmentForm" class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label for="investmentPlan" class="form-label">Investment Plan</label>
+                    <select class="form-select" id="investmentPlan" required>
+                        <option value="">Select a plan</option>
+                        <option value="1">Fixed Income Plan - 12% / 3 months (Min $100)</option>
+                        <option value="2">Growth Fund - 20% / 6 months (Min $100)</option>
+                        <option value="3">Short-Term Bond - 8% / 2 months (Min $100)</option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-4">
                     <label for="amount" class="form-label">Amount ($)</label>
                     <input
@@ -227,7 +237,7 @@
                         <option value="USDT">Tether (USDT-ERC20)</option>
                     </select>
                 </div>
-                <div class="col-12 col-md-4 d-flex align-items-end">
+                <div class="col-12 d-flex align-items-end">
                     <button type="submit" class="btn btn-success w-100">
                         <i class="fas fa-plus-circle"></i> Invest Now
                     </button>
@@ -353,28 +363,31 @@
     <!-- QRious for QR code generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script>
-        // --- Available Investment Plans ---
+        // --- Updated Available Investment Plans ---
         const availableInvestments = [
             {
                 id: 1,
                 name: "Fixed Income Plan",
-                description: "Earn 6% annual interest. Minimum $500.",
-                minAmount: 500,
-                rate: 0.06
+                description: "Earn 12% interest over 3 months. Minimum $100.",
+                minAmount: 100,
+                rate: 0.12,  // 12% for 3 months
+                durationMonths: 3
             },
             {
                 id: 2,
                 name: "Growth Fund",
-                description: "Projected 10% annual return. Minimum $1000.",
-                minAmount: 1000,
-                rate: 0.10
+                description: "Projected 20% return over 6 months. Minimum $100.",
+                minAmount: 100,
+                rate: 0.20,  // 20% for 6 months
+                durationMonths: 6
             },
             {
                 id: 3,
                 name: "Short-Term Bond",
-                description: "4% for 6 months. Minimum $300.",
-                minAmount: 300,
-                rate: 0.04
+                description: "8% return over 2 months. Minimum $100.",
+                minAmount: 100,
+                rate: 0.08,  // 8% for 2 months
+                durationMonths: 2
             }
         ];
 
@@ -403,6 +416,7 @@
             });
             document.querySelectorAll('.invest-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
+                    document.getElementById('investmentPlan').value = this.getAttribute('data-id');
                     document.getElementById('amount').value = this.getAttribute('data-min');
                     document.getElementById('amount').focus();
                 });
@@ -640,6 +654,7 @@
                         <td>${inv.date}</td>
                         <td>$${inv.amount.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                         <td>$${inv.return.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                        <td>${inv.planName || ''}</td>
                         <td><span class="badge ${inv.status === 'Active' ? 'bg-success' : 'bg-secondary'}">${inv.status}</span></td>
                     </tr>
                 `;
@@ -660,29 +675,45 @@
 
         document.getElementById('investmentForm').onsubmit = function(e) {
             e.preventDefault();
+            const planId = document.getElementById('investmentPlan').value;
             const amountInput = document.getElementById('amount');
             const cryptoType = document.getElementById('cryptoType').value;
             const amount = parseFloat(amountInput.value);
-            if (isNaN(amount) || amount < 100) {
+
+            if (!planId) {
+                alert('Please select an investment plan.');
+                return;
+            }
+
+            const plan = availableInvestments.find(p => p.id.toString() === planId);
+            if (!plan) {
+                alert('Invalid investment plan selected.');
+                return;
+            }
+
+            if (isNaN(amount) || amount < plan.minAmount) {
+                alert(`Amount must be at least $${plan.minAmount}`);
                 amountInput.classList.add('is-invalid');
                 return;
             }
             amountInput.classList.remove('is-invalid');
+
             sessionStorage.setItem('pendingInvestmentAmount', amount);
             sessionStorage.setItem('pendingCryptoType', cryptoType);
+            sessionStorage.setItem('pendingPlanId', planId);
 
-            // --- Wallet addresses and rates ---
+            // Wallet addresses and rates as before...
             const wallets = {
                 BTC: {
-                    address: "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P", // <-- REPLACE
-                    usdRate: 50000 // <-- UPDATE
+                    address: "16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P",
+                    usdRate: 50000
                 },
                 ETH: {
-                    address: "0xced6ec6ec624b561483822768b8af6bad3777aee", // <-- REPLACE
-                    usdRate: 3500 // <-- UPDATE
+                    address: "0xced6ec6ec624b561483822768b8af6bad3777aee",
+                    usdRate: 3500
                 },
                 USDT: {
-                    address: "0xced6ec6ec624b561483822768b8af6bad3777aee", // <-- REPLACE (ERC20)
+                    address: "0xced6ec6ec624b561483822768b8af6bad3777aee",
                     usdRate: 1
                 }
             };
@@ -698,16 +729,13 @@
                 paymentUri = `ethereum:${selected.address}?value=${cryptoAmount}`;
                 cryptoName = "Ethereum (ETH)";
             } else if (cryptoType === "USDT") {
-                // USDT-ERC20: no standard URI, just show address and amount
                 paymentUri = selected.address;
                 cryptoName = "Tether (USDT-ERC20)";
             }
 
-            // Store for Proceed button
             currentPaymentUri = paymentUri;
             currentCryptoType = cryptoType;
 
-            // Show crypto payment modal as fallback
             const modal = new bootstrap.Modal(document.getElementById('cryptoPaymentModal'));
             let html = `
                 <div>
@@ -719,7 +747,6 @@
             `;
             document.getElementById('cryptoPaymentDetails').innerHTML = html;
 
-            // Generate QR code for BTC/ETH; for USDT, QR is just the address
             let qrValue = (cryptoType === "BTC" || cryptoType === "ETH") ? paymentUri : selected.address;
             const qr = new QRious({
                 element: document.getElementById('cryptoQR'),
@@ -764,22 +791,31 @@
         confirmBtn.addEventListener('click', () => {
             const amount = parseFloat(sessionStorage.getItem('pendingInvestmentAmount'));
             const cryptoType = sessionStorage.getItem('pendingCryptoType');
-            if (!amount || !cryptoType) return alert("No pending investment found.");
+            const planId = sessionStorage.getItem('pendingPlanId');
+            if (!amount || !cryptoType || !planId) return alert("No pending investment found.");
 
             const confirmed = confirm(
                 `Have you completed the crypto payment (≈ $${amount.toFixed(2)}) in ${cryptoType} to the provided wallet address?`
             );
             if (!confirmed) return;
 
+            const plan = availableInvestments.find(p => p.id.toString() === planId);
+            if (!plan) {
+                alert("Invalid investment plan.");
+                return;
+            }
+
             const today = new Date();
             const dateStr = today.toISOString().slice(0,10);
-            const estimatedReturn = +(amount * 0.06).toFixed(2);
+            // Use plan.rate for estimated return
+            const estimatedReturn = +(amount * plan.rate).toFixed(2);
             let investments = getInvestments();
             investments.unshift({
                 date: dateStr,
                 amount: amount,
                 return: estimatedReturn,
-                status: 'Active'
+                status: 'Active',
+                planName: plan.name
             });
             saveInvestments(investments);
             renderInvestments();
@@ -787,6 +823,7 @@
 
             sessionStorage.removeItem('pendingInvestmentAmount');
             sessionStorage.removeItem('pendingCryptoType');
+            sessionStorage.removeItem('pendingPlanId');
             confirmBtn.classList.add('d-none');
 
             const alert = document.getElementById('formAlert');
