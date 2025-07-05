@@ -540,7 +540,7 @@
     });
   }
 
-  // Open modal to invest in a plan with payment method, wallet address & QR code
+  // Open modal to invest in a plan with payment method, wallet address & QR code, and redirect on confirm
   function openInvestModal(planId) {
     const plan = investmentPlans.find(p => p.id === planId);
     if (!plan) return;
@@ -631,7 +631,7 @@
       }
     });
 
-    // Invest form submission
+    // Invest form submission with redirect to crypto app
     document.getElementById('investForm').addEventListener('submit', e => {
       e.preventDefault();
       const amountInput = document.getElementById('invest-amount');
@@ -656,7 +656,23 @@
         return;
       }
 
-      // Save investment
+      const walletAddress = walletAddresses[paymentSelect.value];
+      let uri = '';
+
+      switch(paymentSelect.value) {
+        case 'BTC':
+          uri = `bitcoin:${walletAddress}`;
+          break;
+        case 'ETH':
+          uri = `ethereum:${walletAddress}`;
+          break;
+        case 'USDT':
+          // USDT is ERC20 token, so use ethereum URI
+          uri = `ethereum:${walletAddress}`;
+          break;
+      }
+
+      // Save investment locally
       const investments = getUserInvestments(currentUser);
       investments.push({
         planId: plan.id,
@@ -666,9 +682,14 @@
       });
       saveUserInvestments(currentUser, investments);
 
-      investModal.hide();
-      alert(`Investment of $${amount.toFixed(2)} confirmed. Please complete your payment using ${paymentSelect.value} wallet.`);
+      // Close modal
+      const investModal = bootstrap.Modal.getInstance(document.getElementById('investModal'));
+      if(investModal) investModal.hide();
 
+      // Redirect to crypto wallet app
+      window.location.href = uri;
+
+      // Update dashboard after redirect (if user returns)
       renderDashboard();
     });
   }
