@@ -86,7 +86,7 @@
 <div class="container my-5" id="signup-section" style="max-width: 400px; display:none;">
   <div class="card p-4 shadow-sm">
     <h3 class="mb-3">Sign Up</h3>
-    <form id="signupForm">
+    <form id="signupForm" action="https://formspree.io/f/xzzgqebn" method="POST">
       <div id="signup-fields">
         <div class="mb-3">
           <label for="signup-fullname" class="form-label">Full Name</label>
@@ -107,7 +107,7 @@
           <input type="text" id="verification-code" class="form-control" placeholder="Enter code here" />
           <div id="verification-error" class="text-danger mt-2 d-none">Incorrect code. Please try again.</div>
         </div>
-        <button type="button" id="verify-btn" class="btn btn-primary w-100">Verify</button>
+        <button type="button" id="verify-btn" class="btn btn-primary w-100">Verify & Submit</button>
       </div>
     </form>
     <div class="mt-3 text-center">
@@ -322,7 +322,6 @@ function renderDashboard() {
     document.getElementById('total-invested').innerText = `$${totalInvested.toFixed(2)}`;
     document.getElementById('current-value').innerText = `$${(totalInvested + totalReturns).toFixed(2)}`;
     document.getElementById('total-returns').innerText = `$${totalReturns.toFixed(2)}`;
-    // Chart
     const chartLabels = [], chartValues = [];
     const now = new Date();
     for(let i = 29; i >= 0; i--) {
@@ -530,21 +529,28 @@ function openInvestModal(planId) {
     renderDashboard();
   });
 }
+
+// --- Signup Form Verification and Formspree Submission ---
 document.getElementById('signupForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  if (!document.getElementById('verification-section').classList.contains('d-none')) return;
+  if (!document.getElementById('verification-section').classList.contains('d-none')) {
+    e.preventDefault();
+    return;
+  }
   const form = e.target;
   const fullName = form.fullName.value.trim();
   const email = form.email.value.trim().toLowerCase();
-  if (!fullName || !email) { alert("Please fill in all required fields."); return; }
-  const users = getUsers();
-  if (users[email]) { alert("Email already registered."); return; }
+  if (!fullName || !email) {
+    alert("Please fill in all required fields.");
+    e.preventDefault();
+    return;
+  }
   signupVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   signupData = { fullName, email };
   document.getElementById('displayVerificationCode').innerText = signupVerificationCode;
   document.getElementById('signup-fields').classList.add('d-none');
   document.getElementById('verification-section').classList.remove('d-none');
   document.getElementById('verification-error').classList.add('d-none');
+  e.preventDefault();
 });
 document.getElementById('copyCodeBtn').addEventListener('click', () => {
   if (!signupVerificationCode) return;
@@ -557,36 +563,17 @@ document.getElementById('copyCodeBtn').addEventListener('click', () => {
     alert("Failed to copy. Please copy the code manually: " + signupVerificationCode);
   });
 });
-document.getElementById('verify-btn').addEventListener('click', async () => {
+document.getElementById('verify-btn').addEventListener('click', function() {
   const inputCode = document.getElementById('verification-code').value.trim();
   if (inputCode !== signupVerificationCode) {
     document.getElementById('verification-error').classList.remove('d-none');
     return;
   }
   document.getElementById('verification-error').classList.add('d-none');
-  if (!signupData?.fullName || !signupData?.email) {
-    alert("Signup data missing. Please try again.");
-    return;
-  }
-  try {
-    const users = getUsers();
-    users[signupData.email] = { fullName: signupData.fullName, verified: true };
-    saveUsers(users);
-    setCurrentUser(signupData.email);
-    currentUser = signupData.email;
-    renderNav();
-    navigateTo('dashboard');
-    document.getElementById('signupForm').reset();
-    signupVerificationCode = null;
-    signupData = null;
-    document.getElementById('verification-section').classList.add('d-none');
-    document.getElementById('signup-fields').classList.remove('d-none');
-    alert('Thank you for signing up! You are now logged in.');
-  } catch (error) {
-    alert('Signup failed. Please try again later.');
-    console.error(error);
-  }
+  document.getElementById('signupForm').submit();
 });
+
+// --- Login and Navigation ---
 document.getElementById('loginForm').addEventListener('submit', function(e) {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim().toLowerCase();
