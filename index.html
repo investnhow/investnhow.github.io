@@ -12,6 +12,9 @@
   body { background: #f4f7fa; }
   .dashboard-card { background: #fff; border-radius: 14px; padding: 2rem; box-shadow: 0 2px 16px rgba(0,0,0,0.07);}
   .nav-link.active { font-weight: bold; color: #198754 !important; }
+  .plan-card { border-radius: 12px; border: 1px solid #ddd; transition: box-shadow 0.3s ease; }
+  .plan-card:hover { box-shadow: 0 8px 20px rgba(25, 135, 84, 0.3); }
+  .investment-table th, .investment-table td { vertical-align: middle; }
   @media (max-width: 767px) {
     .dashboard-card, .landing-hero { padding: 1rem; }
     h2 { font-size: 1.5rem; }
@@ -102,13 +105,59 @@
       <h2 class="mb-1">Welcome, <span id="userName"></span></h2>
       <p class="mb-0 text-muted">Track your investments and returns in real time.</p>
     </div>
-    <!-- Summary cards could go here -->
+    <button class="btn btn-outline-danger" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
   </div>
-  <!-- Dashboard content omitted for brevity -->
+
+  <!-- Summary Cards -->
+  <div class="row mb-4" id="summary-cards">
+    <div class="col-md-4 mb-3">
+      <div class="p-4 bg-success text-white rounded-4 shadow-sm text-center">
+        <h5>Total Invested</h5>
+        <h3 id="total-invested">$0.00</h3>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="p-4 bg-primary text-white rounded-4 shadow-sm text-center">
+        <h5>Current Value</h5>
+        <h3 id="current-value">$0.00</h3>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="p-4 bg-warning text-white rounded-4 shadow-sm text-center">
+        <h5>Total Returns</h5>
+        <h3 id="total-returns">$0.00</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Investment Plans -->
+  <h3 class="mb-3">Available Investment Plans</h3>
+  <div class="row" id="investment-plans"></div>
+
+  <!-- User Investments -->
+  <h3 class="mt-5 mb-3">Your Investments</h3>
+  <div class="table-responsive">
+    <table class="table table-striped investment-table">
+      <thead>
+        <tr>
+          <th>Plan</th>
+          <th>Amount Invested</th>
+          <th>Start Date</th>
+          <th>Duration</th>
+          <th>Interest Rate</th>
+          <th>Current Value</th>
+          <th>Returns</th>
+        </tr>
+      </thead>
+      <tbody id="user-investments-body">
+        <tr><td colspan="7" class="text-center text-muted">No investments yet.</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <!-- Footer -->
-<footer class="bg-white shadow-sm border-top">
+<footer class="bg-white shadow-sm border-top mt-5">
   <div class="container py-4">
     <div class="row align-items-center">
       <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
@@ -141,11 +190,59 @@
   let signupVerificationCode = null;
   let signupData = null;
 
+  // Investment plans data
+  const investmentPlans = [
+    {
+      id: 'plan-basic',
+      name: 'Basic Plan',
+      minInvestment: 100,
+      maxInvestment: 1000,
+      durationDays: 30,
+      interestRate: 5, // percent
+      description: 'A low-risk plan with steady returns over 30 days.'
+    },
+    {
+      id: 'plan-standard',
+      name: 'Standard Plan',
+      minInvestment: 1000,
+      maxInvestment: 5000,
+      durationDays: 90,
+      interestRate: 12,
+      description: 'Balanced plan with moderate risk and higher returns.'
+    },
+    {
+      id: 'plan-premium',
+      name: 'Premium Plan',
+      minInvestment: 5000,
+      maxInvestment: 20000,
+      durationDays: 180,
+      interestRate: 25,
+      description: 'High-return plan for experienced investors.'
+    }
+  ];
+
+  // LocalStorage helpers
   function getUsers() { return JSON.parse(localStorage.getItem('users') || '{}'); }
   function saveUsers(users) { localStorage.setItem('users', JSON.stringify(users)); }
-  function setCurrentUser(email) { currentUser = email; if(email) localStorage.setItem('currentUser', email); else localStorage.removeItem('currentUser'); }
+  function setCurrentUser(email) { 
+    currentUser = email; 
+    if(email) localStorage.setItem('currentUser', email); 
+    else localStorage.removeItem('currentUser'); 
+  }
   function getCurrentUser() { return localStorage.getItem('currentUser'); }
 
+  // User investments helper
+  function getUserInvestments(email) {
+    const investments = JSON.parse(localStorage.getItem('investments') || '{}');
+    return investments[email] || [];
+  }
+  function saveUserInvestments(email, investments) {
+    const allInvestments = JSON.parse(localStorage.getItem('investments') || '{}');
+    allInvestments[email] = investments;
+    localStorage.setItem('investments', JSON.stringify(allInvestments));
+  }
+
+  // Render navigation links based on auth state
   function renderNav() {
     const navLinks = document.getElementById('nav-links');
     navLinks.innerHTML = '';
@@ -164,6 +261,7 @@
     document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', navHandler));
   }
 
+  // Navigation click handler
   function navHandler(e) {
     e.preventDefault();
     const id = e.target.id;
@@ -174,6 +272,7 @@
     else if (id === 'nav-home-link' || id === 'nav-home') navigateTo('landing');
   }
 
+  // Show/hide sections
   function showSection(section) {
     ['landing-section','login-section','signup-section','dashboard-section'].forEach(id => document.getElementById(id).style.display = 'none');
     if (section === 'dashboard') {
@@ -181,6 +280,7 @@
       document.getElementById('dashboard-section').style.display = '';
       const users = getUsers();
       document.getElementById('userName').innerText = users[currentUser]?.fullName || currentUser;
+      renderDashboard();
     } else if (section === 'login') {
       document.getElementById('login-section').style.display = '';
     } else if (section === 'signup') {
@@ -192,6 +292,7 @@
     }
   }
 
+  // Navigate and update URL hash
   function navigateTo(section) {
     let hash = '';
     if (section === 'landing' || section === 'home') hash = '#home';
@@ -202,13 +303,172 @@
     showSection(section);
   }
 
-  window.addEventListener('hashchange', () => {
-    let hash = window.location.hash.replace('#', '');
-    if (!hash || hash === 'home') hash = 'landing';
-    if (hash === 'dashboard' && !currentUser) hash = 'login';
-    showSection(hash);
-    renderNav();
-  });
+  // Calculate returns for an investment
+  function calculateInvestmentReturn(investment) {
+    const plan = investmentPlans.find(p => p.id === investment.planId);
+    if (!plan) return 0;
+
+    const startDate = new Date(investment.startDate);
+    const now = new Date();
+    const elapsedDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+    const effectiveDays = Math.min(elapsedDays, plan.durationDays);
+
+    // Simple interest formula: principal * rate * time
+    const returns = investment.amount * (plan.interestRate / 100) * (effectiveDays / plan.durationDays);
+    return returns;
+  }
+
+  // Render dashboard summary and investments
+  function renderDashboard() {
+    const investments = getUserInvestments(currentUser);
+    if (investments.length === 0) {
+      document.getElementById('user-investments-body').innerHTML = `<tr><td colspan="7" class="text-center text-muted">No investments yet.</td></tr>`;
+      document.getElementById('total-invested').innerText = '$0.00';
+      document.getElementById('current-value').innerText = '$0.00';
+      document.getElementById('total-returns').innerText = '$0.00';
+    } else {
+      let totalInvested = 0, totalReturns = 0;
+      const tbody = document.getElementById('user-investments-body');
+      tbody.innerHTML = '';
+      const users = getUsers();
+      investments.forEach(inv => {
+        const plan = investmentPlans.find(p => p.id === inv.planId);
+        if (!plan) return;
+
+        const returns = calculateInvestmentReturn(inv);
+        const currentValue = inv.amount + returns;
+        totalInvested += inv.amount;
+        totalReturns += returns;
+
+        const startDate = new Date(inv.startDate);
+        const durationText = `${plan.durationDays} days`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${plan.name}</td>
+          <td>$${inv.amount.toFixed(2)}</td>
+          <td>${startDate.toLocaleDateString()}</td>
+          <td>${durationText}</td>
+          <td>${plan.interestRate}%</td>
+          <td>$${currentValue.toFixed(2)}</td>
+          <td>$${returns.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('total-invested').innerText = `$${totalInvested.toFixed(2)}`;
+      document.getElementById('current-value').innerText = `$${(totalInvested + totalReturns).toFixed(2)}`;
+      document.getElementById('total-returns').innerText = `$${totalReturns.toFixed(2)}`;
+    }
+
+    renderInvestmentPlans();
+  }
+
+  // Render investment plans with invest buttons
+  function renderInvestmentPlans() {
+    const container = document.getElementById('investment-plans');
+    container.innerHTML = '';
+    investmentPlans.forEach(plan => {
+      const col = document.createElement('div');
+      col.className = 'col-md-4 mb-4';
+      col.innerHTML = `
+        <div class="plan-card p-4 h-100 d-flex flex-column justify-content-between">
+          <div>
+            <h5 class="fw-bold">${plan.name}</h5>
+            <p class="text-muted">${plan.description}</p>
+            <ul class="list-unstyled small mb-3">
+              <li><strong>Min Investment:</strong> $${plan.minInvestment}</li>
+              <li><strong>Max Investment:</strong> $${plan.maxInvestment}</li>
+              <li><strong>Duration:</strong> ${plan.durationDays} days</li>
+              <li><strong>Interest Rate:</strong> ${plan.interestRate}%</li>
+            </ul>
+          </div>
+          <button class="btn btn-success invest-btn" data-plan-id="${plan.id}">Invest Now</button>
+        </div>
+      `;
+      container.appendChild(col);
+    });
+
+    // Add event listeners to invest buttons
+    document.querySelectorAll('.invest-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const planId = btn.getAttribute('data-plan-id');
+        openInvestModal(planId);
+      });
+    });
+  }
+
+  // Open modal to invest in a plan
+  function openInvestModal(planId) {
+    const plan = investmentPlans.find(p => p.id === planId);
+    if (!plan) return;
+
+    // Create modal HTML dynamically
+    let modalHtml = `
+      <div class="modal fade" id="investModal" tabindex="-1" aria-labelledby="investModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <form id="investForm">
+              <div class="modal-header">
+                <h5 class="modal-title text-success" id="investModalLabel">Invest in ${plan.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <p>${plan.description}</p>
+                <div class="mb-3">
+                  <label for="invest-amount" class="form-label">Investment Amount ($)</label>
+                  <input type="number" class="form-control" id="invest-amount" name="amount" min="${plan.minInvestment}" max="${plan.maxInvestment}" required placeholder="Between $${plan.minInvestment} and $${plan.maxInvestment}">
+                  <div class="form-text">Minimum: $${plan.minInvestment}, Maximum: $${plan.maxInvestment}</div>
+                </div>
+                <div id="invest-error" class="text-danger d-none"></div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-success">Invest</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Append modal to body
+    const existingModal = document.getElementById('investModal');
+    if (existingModal) existingModal.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Show modal
+    const investModal = new bootstrap.Modal(document.getElementById('investModal'));
+    investModal.show();
+
+    // Handle invest form submission
+    document.getElementById('investForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const amountInput = document.getElementById('invest-amount');
+      const investError = document.getElementById('invest-error');
+      investError.classList.add('d-none');
+      investError.innerText = '';
+
+      let amount = parseFloat(amountInput.value);
+      if (isNaN(amount) || amount < plan.minInvestment || amount > plan.maxInvestment) {
+        investError.innerText = `Please enter an amount between $${plan.minInvestment} and $${plan.maxInvestment}.`;
+        investError.classList.remove('d-none');
+        return;
+      }
+
+      // Save investment
+      const investments = getUserInvestments(currentUser);
+      investments.push({
+        planId: plan.id,
+        amount,
+        startDate: new Date().toISOString()
+      });
+      saveUserInvestments(currentUser, investments);
+
+      investModal.hide();
+      alert(`Successfully invested $${amount.toFixed(2)} in ${plan.name}.`);
+      renderDashboard();
+    });
+  }
 
   // Signup form submit handler
   document.getElementById('signupForm').addEventListener('submit', function(e) {
@@ -233,11 +493,11 @@
     signupVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     signupData = { fullName, email };
 
-    // Show modal with code
-    const modalCodeElem = document.getElementById('modalVerificationCode');
-    modalCodeElem.innerText = signupVerificationCode;
-    const verificationModal = new bootstrap.Modal(document.getElementById('verificationCodeModal'));
-    verificationModal.show();
+    // Show verification code in signup section
+    document.getElementById('displayVerificationCode').innerText = signupVerificationCode;
+    document.getElementById('signup-fields').classList.add('d-none');
+    document.getElementById('verification-section').classList.remove('d-none');
+    document.getElementById('verification-error').classList.add('d-none');
   });
 
   // Copy & Paste Code button handler
@@ -245,16 +505,9 @@
     if (!signupVerificationCode) return;
     navigator.clipboard.writeText(signupVerificationCode).then(() => {
       alert("Verification code copied to clipboard.");
-      // Paste code into verification input
       const verificationInput = document.getElementById('verification-code');
       verificationInput.value = signupVerificationCode;
       verificationInput.focus();
-      // Hide modal after copy
-      bootstrap.Modal.getInstance(document.getElementById('verificationCodeModal')).hide();
-      // Show verification input section below signup fields
-      document.getElementById('signup-fields').classList.add('d-none');
-      document.getElementById('verification-section').classList.remove('d-none');
-      document.getElementById('verification-error').classList.add('d-none');
     }, () => {
       alert("Failed to copy. Please copy the code manually: " + signupVerificationCode);
     });
@@ -274,37 +527,24 @@
       return;
     }
 
-    const formData = new FormData();
-    formData.append('fullName', signupData.fullName);
-    formData.append('email', signupData.email);
-
+    // Simulate form submission (can be replaced with actual API call)
     try {
-      const response = await fetch('https://formspree.io/f/xzzgqebn', {
-        method: 'POST',
-        body: formData,
-        headers: { 'Accept': 'application/json' }
-      });
-
-      if (response.ok) {
-        alert('Thank you for signing up! Please check your email for verification.');
-        const users = getUsers();
-        users[signupData.email] = { fullName: signupData.fullName, verified: true };
-        saveUsers(users);
-        setCurrentUser(signupData.email);
-        currentUser = signupData.email;
-        renderNav();
-        navigateTo('dashboard');
-        document.getElementById('signupForm').reset();
-        signupVerificationCode = null;
-        signupData = null;
-        document.getElementById('verification-section').classList.add('d-none');
-        document.getElementById('signup-fields').classList.remove('d-none');
-      } else {
-        const data = await response.json();
-        alert(data.errors ? data.errors.map(e => e.message).join(", ") : 'Submission failed.');
-      }
+      // Save user locally as verified
+      const users = getUsers();
+      users[signupData.email] = { fullName: signupData.fullName, verified: true };
+      saveUsers(users);
+      setCurrentUser(signupData.email);
+      currentUser = signupData.email;
+      renderNav();
+      navigateTo('dashboard');
+      document.getElementById('signupForm').reset();
+      signupVerificationCode = null;
+      signupData = null;
+      document.getElementById('verification-section').classList.add('d-none');
+      document.getElementById('signup-fields').classList.remove('d-none');
+      alert('Thank you for signing up! You are now logged in.');
     } catch (error) {
-      alert('Submission failed. Please try again later.');
+      alert('Signup failed. Please try again later.');
       console.error(error);
     }
   });
@@ -320,12 +560,13 @@
       renderNav();
       navigateTo('dashboard');
     } else {
-      const alert = document.getElementById('login-alert');
-      alert.innerText = "Invalid or unverified email.";
-      alert.classList.remove('d-none');
+      const alertEl = document.getElementById('login-alert');
+      alertEl.innerText = "Invalid or unverified email.";
+      alertEl.classList.remove('d-none');
     }
   });
 
+  // Logout function
   function logout() {
     setCurrentUser(null);
     currentUser = null;
@@ -336,6 +577,15 @@
   // Initialization
   document.getElementById('get-started-btn').onclick = () => navigateTo('signup');
   document.getElementById('nav-home').onclick = e => { e.preventDefault(); navigateTo('landing'); };
+  document.getElementById('logout-btn').onclick = logout;
+
+  window.addEventListener('hashchange', () => {
+    let hash = window.location.hash.replace('#', '');
+    if (!hash || hash === 'home') hash = 'landing';
+    if (hash === 'dashboard' && !currentUser) hash = 'login';
+    showSection(hash);
+    renderNav();
+  });
 
   window.onload = () => {
     currentUser = getCurrentUser();
@@ -346,22 +596,5 @@
     showSection(hash);
   };
 </script>
-
-<!-- Verification Code Modal -->
-<div class="modal fade" id="verificationCodeModal" tabindex="-1" aria-labelledby="verificationCodeModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title text-success" id="verificationCodeModalLabel">Email Verification Code</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-center">
-        <p>A verification code has been generated.</p>
-        <p><strong id="modalVerificationCode" style="font-size:1.5rem; letter-spacing: 0.2em; user-select: all; cursor: pointer;"></strong></p>
-        <button type="button" class="btn btn-outline-primary w-100" id="copyCodeBtn">Copy & Paste Code</button>
-      </div>
-    </div>
-  </div>
-</div>
 </body>
 </html>
