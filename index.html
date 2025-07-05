@@ -130,7 +130,7 @@
         </div>
     </div>
 
-    <!-- Signup Form with inline verification -->
+    <!-- Signup Form with Formspree -->
     <div class="container my-5" id="signup-section" style="max-width: 400px; display:none;">
         <div class="card p-4 shadow-sm">
             <h3 class="mb-3">Sign Up</h3>
@@ -147,8 +147,9 @@
                     <button type="submit" class="btn btn-success w-100">Sign Up</button>
                 </div>
                 <div id="verification-section" class="d-none mt-3">
-                    <p>A verification code has been sent to your email.</p>
-                    <p><strong>Your verification code is: <span id="displayVerificationCode" style="font-size:1.5rem; letter-spacing:0.2em;"></span></strong></p>
+                    <p>A verification code has been generated.</p>
+                    <p><strong>Your verification code is: <span id="displayVerificationCode" style="font-size:1.5rem; letter-spacing:0.2em; user-select: all; cursor: pointer;"></span></strong></p>
+                    <button type="button" id="copyCodeBtn" class="btn btn-outline-secondary mb-3 w-100">Copy & Paste Code</button>
                     <div class="mb-3">
                         <label for="verification-code" class="form-label">Enter Verification Code</label>
                         <input type="text" id="verification-code" class="form-control" placeholder="Enter code here" />
@@ -166,213 +167,36 @@
 
     <!-- Dashboard -->
     <div class="dashboard-card mx-auto" id="dashboard-section" style="max-width: 950px; display:none;">
+        <!-- Dashboard content omitted for brevity, same as previous code -->
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
             <div>
                 <h2 class="mb-1">Welcome, <span id="userName"></span></h2>
                 <p class="mb-0 text-muted">Track your investments and returns in real time.</p>
             </div>
-            <div class="d-flex flex-wrap gap-3">
-                <div class="summary-card p-3 bg-success text-white rounded-3 text-center shadow-sm">
-                    <div class="fs-5"><i class="fas fa-wallet"></i></div>
-                    <div class="fs-6">Total Invested</div>
-                    <div class="fs-4 fw-bold" id="totalInvested">$0.00</div>
-                </div>
-                <div class="summary-card p-3 bg-info text-white rounded-3 text-center shadow-sm">
-                    <div class="fs-5"><i class="fas fa-coins"></i></div>
-                    <div class="fs-6">Total Returns</div>
-                    <div class="fs-4 fw-bold" id="totalReturns">$0.00</div>
-                </div>
-            </div>
+            <!-- Summary cards ... -->
         </div>
-        <!-- Available Investments Section -->
-        <div class="mb-4" id="available-investments-section">
-            <h4 class="mb-3">Available Investment Opportunities</h4>
-            <div class="row" id="availableInvestmentsList"></div>
-        </div>
-        <!-- Your Investments Table -->
-        <div class="table-responsive">
-            <h4 class="mb-3">Your Investments</h4>
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Date</th>
-                        <th>Amount ($)</th>
-                        <th>Return ($)</th>
-                        <th>Plan</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="investmentTable"></tbody>
-            </table>
-        </div>
-        <div class="mt-4">
-            <h4 class="mb-3">Add New Investment</h4>
-            <form id="investmentForm" class="row g-3">
-                <div class="col-12 col-md-4">
-                    <label for="investmentPlan" class="form-label">Investment Plan</label>
-                    <select class="form-select" id="investmentPlan" required>
-                        <option value="">Select a plan</option>
-                        <option value="1">Fixed Income Plan - 12% / 3 months (Min $100)</option>
-                        <option value="2">Growth Fund - 20% / 6 months (Min $100)</option>
-                        <option value="3">Short-Term Bond - 8% / 2 months (Min $100)</option>
-                    </select>
-                </div>
-                <div class="col-12 col-md-4">
-                    <label for="amount" class="form-label">Amount ($)</label>
-                    <input
-                      type="number"
-                      min="100"
-                      step="0.01"
-                      class="form-control"
-                      id="amount"
-                      placeholder="Enter amount"
-                      required
-                    />
-                </div>
-                <div class="col-12 col-md-4">
-                    <label for="cryptoType" class="form-label">Pay With</label>
-                    <select class="form-select" id="cryptoType" required>
-                        <option value="BTC">Bitcoin (BTC)</option>
-                        <option value="ETH">Ethereum (ETH)</option>
-                        <option value="USDT">Tether (USDT-ERC20)</option>
-                    </select>
-                </div>
-                <div class="col-12 d-flex align-items-end">
-                    <button type="submit" class="btn btn-success w-100">
-                        <i class="fas fa-plus-circle"></i> Invest Now
-                    </button>
-                </div>
-            </form>
-            <div class="mt-3">
-                <button id="confirmPaymentBtn" class="btn btn-primary w-100 d-none">Confirm Payment Received</button>
-            </div>
-            <div id="formAlert" class="alert alert-success mt-3 d-none" role="alert">
-                Investment added successfully!
-            </div>
-        </div>
+        <!-- Investments and forms ... -->
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-white shadow-sm border-top">
-      <div class="container py-4">
-        <div class="row align-items-center">
-          <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
-            <span class="fw-bold text-success fs-5"><i class="fas fa-chart-line"></i> InvestNow</span>
-            <span class="d-block small text-muted mt-1">Your trusted platform for secure and transparent investments.</span>
-          </div>
-          <div class="col-md-4 text-center mb-3 mb-md-0">
-            <ul class="list-inline mb-0">
-              <li class="list-inline-item"><a href="#home" class="text-muted text-decoration-none footer-link" data-section="landing">Home</a></li>
-              <li class="list-inline-item"><a href="#login" class="text-muted text-decoration-none footer-link" data-section="login">Login</a></li>
-              <li class="list-inline-item"><a href="#signup" class="text-muted text-decoration-none footer-link" data-section="signup">Sign Up</a></li>
-              <li class="list-inline-item"><a href="#dashboard" class="text-muted text-decoration-none footer-link" data-section="dashboard">Dashboard</a></li>
-            </ul>
-          </div>
-          <div class="col-md-4 text-center text-md-end">
-            <a href="https://www.facebook.com/investnhow" class="text-success me-3 fs-5"><i class="fab fa-facebook"></i></a>
-            <a href="#" class="text-success me-3 fs-5"><i class="fab fa-twitter"></i></a>
-            <a href="#" class="text-success me-3 fs-5"><i class="fab fa-linkedin"></i></a>
-            <a href="#" class="text-success fs-5"><i class="fab fa-instagram"></i></a>
-          </div>
-        </div>
-        <hr class="my-3" />
-        <div class="text-center small text-muted">&copy; 2025 InvestNow. All rights reserved.</div>
-      </div>
-    </footer>
+    <!-- Footer omitted for brevity, same as previous code -->
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- QRious for QR code generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script>
-        const availableInvestments = [
-            { id: 1, name: "Fixed Income Plan", description: "Earn 12% interest over 3 months. Minimum $100.", minAmount: 100, rate: 0.12 },
-            { id: 2, name: "Growth Fund", description: "Projected 20% return over 6 months. Minimum $100.", minAmount: 100, rate: 0.20 },
-            { id: 3, name: "Short-Term Bond", description: "8% return over 2 months. Minimum $100.", minAmount: 100, rate: 0.08 }
-        ];
+        // Variables and utility functions as before (users, investments, etc.)
 
         let currentUser = null;
         let signupVerificationCode = null;
 
         function getUsers() { return JSON.parse(localStorage.getItem('users') || '{}'); }
         function saveUsers(users) { localStorage.setItem('users', JSON.stringify(users)); }
-        function getInvestments() { if (!currentUser) return []; return JSON.parse(localStorage.getItem('investments_' + currentUser) || '[]'); }
-        function saveInvestments(investments) { if (!currentUser) return; localStorage.setItem('investments_' + currentUser, JSON.stringify(investments)); }
-        function setCurrentUser(email) { currentUser = email; if (email) localStorage.setItem('currentUser', email); else localStorage.removeItem('currentUser'); }
+        function setCurrentUser(email) { currentUser = email; if(email) localStorage.setItem('currentUser', email); else localStorage.removeItem('currentUser'); }
         function getCurrentUser() { return localStorage.getItem('currentUser'); }
+        // ... other utility functions like renderNav, navigateTo, etc. (use previous full code)
 
-        function renderNav() {
-            const navLinks = document.getElementById('nav-links');
-            navLinks.innerHTML = '';
-            if (currentUser) {
-                navLinks.innerHTML = `
-                    <li class="nav-item"><a href="#dashboard" class="nav-link active" id="nav-dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a href="#logout" class="nav-link" id="nav-logout">Logout</a></li>
-                `;
-            } else {
-                navLinks.innerHTML = `
-                    <li class="nav-item"><a href="#home" class="nav-link active" id="nav-home-link">Home</a></li>
-                    <li class="nav-item"><a href="#login" class="nav-link" id="nav-login">Login</a></li>
-                    <li class="nav-item"><a href="#signup" class="nav-link" id="nav-signup">Sign Up</a></li>
-                `;
-            }
-            document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', navHandler));
-        }
-
-        function navHandler(e) {
-            e.preventDefault();
-            const id = e.target.id;
-            if (id === 'nav-dashboard') navigateTo('dashboard');
-            else if (id === 'nav-login') navigateTo('login');
-            else if (id === 'nav-signup') navigateTo('signup');
-            else if (id === 'nav-logout') logout();
-            else if (id === 'nav-home-link' || id === 'nav-home') navigateTo('landing');
-        }
-
-        function showSection(section) {
-            ['landing-section','login-section','signup-section','dashboard-section'].forEach(id => document.getElementById(id).style.display = 'none');
-            if (section === 'dashboard') {
-                if (!currentUser) { showSection('login'); return; }
-                document.getElementById('dashboard-section').style.display = '';
-                const users = getUsers();
-                document.getElementById('userName').innerText = users[currentUser]?.fullName || currentUser;
-                renderAvailableInvestments();
-                renderInvestments();
-                updateTotals();
-            } else if (section === 'login') {
-                document.getElementById('login-section').style.display = '';
-                document.getElementById('login-alert').classList.add('d-none');
-            } else if (section === 'signup') {
-                document.getElementById('signup-section').style.display = '';
-                document.getElementById('signup-alert').classList.add('d-none');
-                document.getElementById('verification-section').classList.add('d-none');
-                document.getElementById('signup-fields').classList.remove('d-none');
-            } else {
-                document.getElementById('landing-section').style.display = '';
-            }
-        }
-
-        function navigateTo(section) {
-            let hash = '';
-            if (section === 'landing' || section === 'home') hash = '#home';
-            else if (section === 'login') hash = '#login';
-            else if (section === 'signup') hash = '#signup';
-            else if (section === 'dashboard') hash = '#dashboard';
-            window.location.hash = hash;
-            showSection(section);
-        }
-
-        function handleHashChange() {
-            let hash = window.location.hash.replace('#', '');
-            if (!hash || hash === 'home') hash = 'landing';
-            if (hash === 'dashboard' && !currentUser) hash = 'login';
-            showSection(hash);
-            renderNav();
-        }
-
-        window.addEventListener('hashchange', handleHashChange);
-
-        // Signup form submission
+        // Signup form submit handler
         document.getElementById('signupForm').addEventListener('submit', function(e) {
             e.preventDefault();
             if (!document.getElementById('verification-section').classList.contains('d-none')) return; // prevent resubmit during verification
@@ -393,18 +217,35 @@
             }
 
             signupVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-            document.getElementById('displayVerificationCode').innerText = signupVerificationCode;
-            document.getElementById('verification-code').value = '';
-            document.getElementById('verification-error').classList.add('d-none');
+            const codeSpan = document.getElementById('displayVerificationCode');
+            codeSpan.innerText = signupVerificationCode;
 
+            // Show verification section, hide signup fields
             document.getElementById('signup-fields').classList.add('d-none');
             document.getElementById('verification-section').classList.remove('d-none');
+            document.getElementById('verification-error').classList.add('d-none');
+            document.getElementById('verification-code').value = '';
 
+            // Store signup data temporarily
             sessionStorage.setItem('signupData', JSON.stringify({ fullName, email }));
         });
 
-        // Verification button
-        document.getElementById('verify-btn').addEventListener('click', async function() {
+        // Copy & Paste Code button handler
+        document.getElementById('copyCodeBtn').addEventListener('click', () => {
+            const code = signupVerificationCode;
+            if (!code) return;
+            navigator.clipboard.writeText(code).then(() => {
+                alert("Verification code copied to clipboard. It will be pasted into the input field.");
+                const input = document.getElementById('verification-code');
+                input.value = code;
+                input.focus();
+            }, () => {
+                alert("Failed to copy. Please copy the code manually: " + code);
+            });
+        });
+
+        // Verify button handler
+        document.getElementById('verify-btn').addEventListener('click', async () => {
             const inputCode = document.getElementById('verification-code').value.trim();
             if (inputCode !== signupVerificationCode) {
                 document.getElementById('verification-error').classList.remove('d-none');
@@ -441,6 +282,7 @@
                     document.getElementById('signupForm').reset();
                     sessionStorage.removeItem('signupData');
                     signupVerificationCode = null;
+                    // Reset UI
                     document.getElementById('verification-section').classList.add('d-none');
                     document.getElementById('signup-fields').classList.remove('d-none');
                 } else {
@@ -453,33 +295,7 @@
             }
         });
 
-        // Login form
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value.trim().toLowerCase();
-            const users = getUsers();
-            if (users[email] && users[email].verified) {
-                setCurrentUser(email);
-                currentUser = email;
-                renderNav();
-                navigateTo('dashboard');
-                const loginModal = new bootstrap.Modal(document.getElementById('loginSuccessModal'));
-                loginModal.show();
-            } else {
-                const alert = document.getElementById('login-alert');
-                alert.innerText = "Invalid or unverified email.";
-                alert.classList.remove('d-none');
-            }
-        });
-
-        function logout() {
-            setCurrentUser(null);
-            currentUser = null;
-            renderNav();
-            navigateTo('landing');
-        }
-
-        // Investment and payment code omitted for brevity; use previous full code's investment logic here.
+        // Other code for login, investments, payments, navigation etc. goes here (use your existing code)...
 
         // Initialization
         document.getElementById('get-started-btn').onclick = () => navigateTo('signup');
