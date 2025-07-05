@@ -78,11 +78,11 @@
   </div>
 </div>
 
-<!-- Signup Section (Formspree integration) -->
+<!-- Signup Section (Formspree integration + AJAX redirect) -->
 <div class="container my-5" id="signup-section" style="max-width: 400px; display:none;">
   <div class="card p-4 shadow-sm">
     <h3 class="mb-3">Sign Up</h3>
-    <form id="signupForm" action="https://formspree.io/f/xzzgqebn" method="POST">
+    <form id="signupForm" action="https://formspree.io/f/yourformid" method="POST">
       <div class="mb-3">
         <label for="signup-fullname" class="form-label">Full Name</label>
         <input type="text" class="form-control" id="signup-fullname" name="fullName" required />
@@ -185,8 +185,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ... All your JS code from before, EXCEPT for the signupForm event listener ...
-// Remove or comment out any JS that intercepts the signup form submit!
 let currentUser = null;
 let investmentChart = null;
 
@@ -361,6 +359,34 @@ function renderInvestmentChart(labels, data) {
     }
   });
 }
+function renderInvestmentPlans() {
+  const container = document.getElementById('investment-plans');
+  container.innerHTML = '';
+  investmentPlans.forEach(plan => {
+    const col = document.createElement('div');
+    col.className = 'col-md-4 mb-4';
+    col.innerHTML = `<div class="plan-card p-4 h-100 d-flex flex-column justify-content-between">
+      <div>
+        <h5 class="fw-bold">${plan.name}</h5>
+        <p class="text-muted">${plan.description}</p>
+        <ul class="list-unstyled small mb-3">
+          <li><strong>Min Investment:</strong> $${plan.minInvestment}</li>
+          <li><strong>Max Investment:</strong> $${plan.maxInvestment}</li>
+          <li><strong>Duration:</strong> ${plan.durationDays} days</li>
+          <li><strong>Interest Rate:</strong> ${plan.interestRate}%</li>
+        </ul>
+      </div>
+      <button class="btn btn-success invest-btn" data-plan-id="${plan.id}">Invest Now</button>
+    </div>`;
+    container.appendChild(col);
+  });
+  document.querySelectorAll('.invest-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const planId = btn.getAttribute('data-plan-id');
+      openInvestModal(planId);
+    });
+  });
+}
 function openInvestModal(planId) {
   const plan = investmentPlans.find(p => p.id === planId);
   if (!plan) return;
@@ -480,6 +506,37 @@ function openInvestModal(planId) {
     renderDashboard();
   });
 }
+
+// Signup form AJAX submission to Formspree and dashboard redirect
+document.getElementById('signupForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = new FormData(form);
+  fetch(form.action, {
+    method: 'POST',
+    body: data,
+    headers: { 'Accept': 'application/json' }
+  }).then(response => {
+    if (response.ok) {
+      // Save user locally for dashboard experience
+      const users = JSON.parse(localStorage.getItem('users') || '{}');
+      users[data.get('email')] = { fullName: data.get('fullName'), verified: true };
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('currentUser', data.get('email'));
+      window.location.hash = "#dashboard";
+      window.location.reload();
+    } else {
+      response.json().then(data => {
+        document.getElementById('signup-alert').textContent = data.errors ? data.errors.map(e => e.message).join(", ") : 'Submission failed.';
+        document.getElementById('signup-alert').classList.remove('d-none');
+      });
+    }
+  }).catch(() => {
+    document.getElementById('signup-alert').textContent = 'Submission failed. Please try again later.';
+    document.getElementById('signup-alert').classList.remove('d-none');
+  });
+});
+
 document.getElementById('loginForm').addEventListener('submit', function(e) {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim().toLowerCase();
