@@ -22,19 +22,6 @@
   .dashboard-card:hover {
     transform: translateY(-5px);
   }
-  .summary-card {
-    border-radius: 20px;
-    color: white;
-    padding: 2rem;
-    box-shadow: 0 8px 20px rgba(25, 135, 84, 0.3);
-    transition: transform 0.3s ease;
-  }
-  .summary-card:hover {
-    transform: scale(1.05);
-  }
-  .summary-total-invested { background: #198754; }
-  .summary-current-value { background: #0d6efd; }
-  .summary-total-returns { background: #ffc107; color: #212529; }
 
   h2, h3 {
     font-weight: 700;
@@ -72,9 +59,6 @@
   @media (max-width: 767px) {
     .dashboard-card {
       padding: 1.5rem;
-    }
-    .summary-card {
-      margin-bottom: 1rem;
     }
   }
 
@@ -176,26 +160,24 @@
     <button class="btn btn-outline-danger" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
   </div>
 
-  <!-- Summary Cards -->
-  <div class="row mb-4">
-    <div class="col-md-4">
-      <div class="summary-card summary-total-invested text-center">
-        <h5>Total Invested</h5>
-        <h3 id="total-invested">$0.00</h3>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="summary-card summary-current-value text-center">
-        <h5>Current Value</h5>
-        <h3 id="current-value">$0.00</h3>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="summary-card summary-total-returns text-center">
-        <h5>Total Returns</h5>
-        <h3 id="total-returns">$0.00</h3>
-      </div>
-    </div>
+  <!-- Summary Table -->
+  <div class="table-responsive mb-4">
+    <table class="table table-bordered text-center align-middle" style="max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 6px 20px rgba(25, 135, 84, 0.15);">
+      <thead class="table-success">
+        <tr>
+          <th>Total Invested</th>
+          <th>Current Value</th>
+          <th>Total Returns</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td id="total-invested" style="font-weight: 700; font-size: 1.5rem; color: #198754;">$0.00</td>
+          <td id="current-value" style="font-weight: 700; font-size: 1.5rem; color: #0d6efd;">$0.00</td>
+          <td id="total-returns" style="font-weight: 700; font-size: 1.5rem; color: #ffc107;">$0.00</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- Chart Section -->
