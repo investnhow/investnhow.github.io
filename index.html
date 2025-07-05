@@ -8,16 +8,84 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
 <!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   body { background: #f4f7fa; }
-  .dashboard-card { background: #fff; border-radius: 14px; padding: 2rem; box-shadow: 0 2px 16px rgba(0,0,0,0.07);}
-  .nav-link.active { font-weight: bold; color: #198754 !important; }
-  .plan-card { border-radius: 12px; border: 1px solid #ddd; transition: box-shadow 0.3s ease; }
-  .plan-card:hover { box-shadow: 0 8px 20px rgba(25, 135, 84, 0.3); }
-  .investment-table th, .investment-table td { vertical-align: middle; }
+  .dashboard-card {
+    background: linear-gradient(135deg, #ffffff 0%, #e6f4ea 100%);
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 10px 30px rgba(25, 135, 84, 0.15);
+    transition: transform 0.3s ease;
+  }
+  .dashboard-card:hover {
+    transform: translateY(-5px);
+  }
+  .summary-card {
+    border-radius: 20px;
+    color: white;
+    padding: 2rem;
+    box-shadow: 0 8px 20px rgba(25, 135, 84, 0.3);
+    transition: transform 0.3s ease;
+  }
+  .summary-card:hover {
+    transform: scale(1.05);
+  }
+  .summary-total-invested { background: #198754; }
+  .summary-current-value { background: #0d6efd; }
+  .summary-total-returns { background: #ffc107; color: #212529; }
+
+  h2, h3 {
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  /* Investment plans cards */
+  .plan-card {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 6px 20px rgba(25, 135, 84, 0.15);
+    transition: box-shadow 0.3s ease;
+    background: white;
+  }
+  .plan-card:hover {
+    box-shadow: 0 12px 30px rgba(25, 135, 84, 0.35);
+  }
+  .invest-btn {
+    border-radius: 50px;
+    font-weight: 600;
+    padding: 0.6rem 1.5rem;
+    transition: background-color 0.3s ease;
+  }
+  .invest-btn:hover {
+    background-color: #145c32;
+  }
+
+  /* Table styling */
+  .investment-table th, .investment-table td {
+    vertical-align: middle;
+    font-weight: 500;
+  }
+
+  /* Responsive tweaks */
   @media (max-width: 767px) {
-    .dashboard-card, .landing-hero { padding: 1rem; }
-    h2 { font-size: 1.5rem; }
+    .dashboard-card {
+      padding: 1.5rem;
+    }
+    .summary-card {
+      margin-bottom: 1rem;
+    }
+  }
+
+  /* Additional styling for verification code display */
+  #displayVerificationCode {
+    font-weight: 700;
+    font-size: 1.6rem;
+    letter-spacing: 0.3em;
+    user-select: all;
+    cursor: pointer;
+    color: #198754;
   }
 </style>
 </head>
@@ -81,7 +149,7 @@
 
       <div id="verification-section" class="d-none mt-3">
         <p>A verification code has been generated.</p>
-        <p><strong id="displayVerificationCode" style="font-size:1.5rem; letter-spacing: 0.2em; user-select: all; cursor: pointer;"></strong></p>
+        <p><strong id="displayVerificationCode"></strong></p>
         <button type="button" id="copyCodeBtn" class="btn btn-outline-primary mb-3 w-100">Copy & Paste Code</button>
         <div class="mb-3">
           <label for="verification-code" class="form-label">Enter Verification Code</label>
@@ -99,7 +167,7 @@
 </div>
 
 <!-- Dashboard Section -->
-<div class="dashboard-card mx-auto" id="dashboard-section" style="max-width: 950px; display:none;">
+<div class="dashboard-card mx-auto" id="dashboard-section" style="max-width: 980px; display:none;">
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
     <div>
       <h2 class="mb-1">Welcome, <span id="userName"></span></h2>
@@ -109,36 +177,40 @@
   </div>
 
   <!-- Summary Cards -->
-  <div class="row mb-4" id="summary-cards">
-    <div class="col-md-4 mb-3">
-      <div class="p-4 bg-success text-white rounded-4 shadow-sm text-center">
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="summary-card summary-total-invested text-center">
         <h5>Total Invested</h5>
         <h3 id="total-invested">$0.00</h3>
       </div>
     </div>
-    <div class="col-md-4 mb-3">
-      <div class="p-4 bg-primary text-white rounded-4 shadow-sm text-center">
+    <div class="col-md-4">
+      <div class="summary-card summary-current-value text-center">
         <h5>Current Value</h5>
         <h3 id="current-value">$0.00</h3>
       </div>
     </div>
-    <div class="col-md-4 mb-3">
-      <div class="p-4 bg-warning text-white rounded-4 shadow-sm text-center">
+    <div class="col-md-4">
+      <div class="summary-card summary-total-returns text-center">
         <h5>Total Returns</h5>
         <h3 id="total-returns">$0.00</h3>
       </div>
     </div>
   </div>
 
+  <!-- Chart Section -->
+  <h3 class="mb-3">Investment Performance</h3>
+  <canvas id="investmentChart" height="120"></canvas>
+
   <!-- Investment Plans -->
-  <h3 class="mb-3">Available Investment Plans</h3>
+  <h3 class="my-4">Available Investment Plans</h3>
   <div class="row" id="investment-plans"></div>
 
   <!-- User Investments -->
   <h3 class="mt-5 mb-3">Your Investments</h3>
   <div class="table-responsive">
-    <table class="table table-striped investment-table">
-      <thead>
+    <table class="table table-striped investment-table shadow-sm rounded-4">
+      <thead class="table-success">
         <tr>
           <th>Plan</th>
           <th>Amount Invested</th>
@@ -189,6 +261,7 @@
   let currentUser = null;
   let signupVerificationCode = null;
   let signupData = null;
+  let investmentChart = null;
 
   // Investment plans data
   const investmentPlans = [
@@ -318,7 +391,7 @@
     return returns;
   }
 
-  // Render dashboard summary and investments
+  // Render dashboard summary, investments, and chart
   function renderDashboard() {
     const investments = getUserInvestments(currentUser);
     if (investments.length === 0) {
@@ -326,11 +399,11 @@
       document.getElementById('total-invested').innerText = '$0.00';
       document.getElementById('current-value').innerText = '$0.00';
       document.getElementById('total-returns').innerText = '$0.00';
+      renderInvestmentChart([], []);
     } else {
       let totalInvested = 0, totalReturns = 0;
       const tbody = document.getElementById('user-investments-body');
       tbody.innerHTML = '';
-      const users = getUsers();
       investments.forEach(inv => {
         const plan = investmentPlans.find(p => p.id === inv.planId);
         if (!plan) return;
@@ -358,9 +431,87 @@
       document.getElementById('total-invested').innerText = `$${totalInvested.toFixed(2)}`;
       document.getElementById('current-value').innerText = `$${(totalInvested + totalReturns).toFixed(2)}`;
       document.getElementById('total-returns').innerText = `$${totalReturns.toFixed(2)}`;
+
+      // Prepare data for chart: show total current value over last 30 days
+      const chartLabels = [];
+      const chartValues = [];
+
+      const now = new Date();
+      for(let i = 29; i >= 0; i--) {
+        const day = new Date(now);
+        day.setDate(now.getDate() - i);
+        chartLabels.push(day.toLocaleDateString(undefined, {month: 'short', day: 'numeric'}));
+
+        let dayValue = 0;
+        investments.forEach(inv => {
+          const plan = investmentPlans.find(p => p.id === inv.planId);
+          if (!plan) return;
+          const startDate = new Date(inv.startDate);
+          if(day < startDate) return;
+          const elapsedDays = Math.floor((day - startDate) / (1000 * 60 * 60 * 24));
+          const effectiveDays = Math.min(elapsedDays, plan.durationDays);
+          const returns = inv.amount * (plan.interestRate / 100) * (effectiveDays / plan.durationDays);
+          dayValue += inv.amount + returns;
+        });
+        chartValues.push(dayValue.toFixed(2));
+      }
+
+      renderInvestmentChart(chartLabels, chartValues);
     }
 
     renderInvestmentPlans();
+  }
+
+  // Render Chart.js line chart
+  function renderInvestmentChart(labels, data) {
+    const ctx = document.getElementById('investmentChart').getContext('2d');
+    if (investmentChart) {
+      investmentChart.destroy();
+    }
+    investmentChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Portfolio Value ($)',
+          data,
+          fill: true,
+          backgroundColor: 'rgba(25, 135, 84, 0.2)',
+          borderColor: '#198754',
+          borderWidth: 3,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#198754'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true, labels: { font: { size: 14, weight: 'bold' } } },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { maxRotation: 45, minRotation: 45 }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#e9ecef' },
+            ticks: {
+              callback: val => '$' + val,
+              font: { size: 13 }
+            }
+          }
+        },
+        interaction: {
+          mode: 'nearest',
+          axis: 'x',
+          intersect: false
+        }
+      }
+    });
   }
 
   // Render investment plans with invest buttons
