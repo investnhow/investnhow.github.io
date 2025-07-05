@@ -255,7 +255,7 @@
       name: 'Basic Plan',
       minInvestment: 100,
       maxInvestment: 1000,
-      durationDays: 1, // 1 day duration
+      durationDays: 1,
       interestRate: 15,
       description: 'A low-risk plan with steady returns over 1 day.'
     },
@@ -264,7 +264,7 @@
       name: 'Standard Plan',
       minInvestment: 1000,
       maxInvestment: 5000,
-      durationDays: 3, // 3 days duration
+      durationDays: 3,
       interestRate: 30,
       description: 'Balanced plan with moderate risk and higher returns over 3 days.'
     },
@@ -273,11 +273,18 @@
       name: 'Premium Plan',
       minInvestment: 5000,
       maxInvestment: 20000,
-      durationDays: 5, // 5 days duration
+      durationDays: 5,
       interestRate: 50,
       description: 'High-return plan for experienced investors over 5 days.'
     }
   ];
+
+  // Wallet addresses for payment methods (replace with your actual addresses)
+  const walletAddresses = {
+    BTC: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
+    ETH: '0x32Be343B94f860124dC4fEe278FDCBD38C102D88',
+    USDT: 'TXYZ1234567890abcdef1234567890abcdef1234'
+  };
 
   // LocalStorage helpers
   function getUsers() { return JSON.parse(localStorage.getItem('users') || '{}'); }
@@ -533,12 +540,12 @@
     });
   }
 
-  // Open modal to invest in a plan with payment method selection
+  // Open modal to invest in a plan with payment method, wallet address & QR code
   function openInvestModal(planId) {
     const plan = investmentPlans.find(p => p.id === planId);
     if (!plan) return;
 
-    // Create modal HTML dynamically with payment options
+    // Modal HTML with payment method & wallet info
     let modalHtml = `
       <div class="modal fade" id="investModal" tabindex="-1" aria-labelledby="investModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -565,10 +572,18 @@
                   </select>
                   <div id="payment-error" class="text-danger d-none mt-2"></div>
                 </div>
-                <div id="invest-error" class="text-danger d-none"></div>
+                <div id="payment-details" class="d-none border rounded p-3 bg-light">
+                  <p><strong>Wallet Address:</strong></p>
+                  <p id="wallet-address" style="word-break: break-all; font-family: monospace;"></p>
+                  <div class="text-center">
+                    <img id="wallet-qr" src="" alt="QR Code" style="max-width: 180px; margin: auto;" />
+                  </div>
+                  <small class="text-muted d-block mt-2">Scan the QR code or copy the address to complete your payment.</small>
+                </div>
+                <div id="invest-error" class="text-danger d-none mt-3"></div>
               </div>
               <div class="modal-footer">
-                <button type="submit" class="btn btn-success">Invest</button>
+                <button type="submit" class="btn btn-success">Confirm Investment</button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
               </div>
             </form>
@@ -586,7 +601,37 @@
     const investModal = new bootstrap.Modal(document.getElementById('investModal'));
     investModal.show();
 
-    // Handle invest form submission
+    // Wallet addresses (replace with your actual addresses)
+    const walletAddresses = {
+      BTC: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
+      ETH: '0x32Be343B94f860124dC4fEe278FDCBD38C102D88',
+      USDT: 'TXYZ1234567890abcdef1234567890abcdef1234'
+    };
+
+    // Payment method change event
+    const paymentSelect = document.getElementById('payment-method');
+    paymentSelect.addEventListener('change', () => {
+      const val = paymentSelect.value;
+      const detailsDiv = document.getElementById('payment-details');
+      const walletAddressElem = document.getElementById('wallet-address');
+      const walletQRElem = document.getElementById('wallet-qr');
+      const paymentError = document.getElementById('payment-error');
+
+      if (val && walletAddresses[val]) {
+        detailsDiv.classList.remove('d-none');
+        walletAddressElem.textContent = walletAddresses[val];
+        const qrData = encodeURIComponent(walletAddresses[val]);
+        walletQRElem.src = `https://chart.googleapis.com/chart?cht=qr&chs=180x180&chl=${qrData}`;
+        paymentError.classList.add('d-none');
+        paymentError.textContent = '';
+      } else {
+        detailsDiv.classList.add('d-none');
+        walletAddressElem.textContent = '';
+        walletQRElem.src = '';
+      }
+    });
+
+    // Invest form submission
     document.getElementById('investForm').addEventListener('submit', e => {
       e.preventDefault();
       const amountInput = document.getElementById('invest-amount');
@@ -594,25 +639,22 @@
       const investError = document.getElementById('invest-error');
       const paymentError = document.getElementById('payment-error');
       investError.classList.add('d-none');
-      investError.innerText = '';
+      investError.textContent = '';
       paymentError.classList.add('d-none');
-      paymentError.innerText = '';
+      paymentError.textContent = '';
 
       let amount = parseFloat(amountInput.value);
       if (isNaN(amount) || amount < plan.minInvestment || amount > plan.maxInvestment) {
-        investError.innerText = `Please enter an amount between $${plan.minInvestment} and $${plan.maxInvestment}.`;
+        investError.textContent = `Please enter an amount between $${plan.minInvestment} and $${plan.maxInvestment}.`;
         investError.classList.remove('d-none');
         return;
       }
 
       if (!paymentSelect.value) {
-        paymentError.innerText = 'Please select a payment method.';
+        paymentError.textContent = 'Please select a payment method.';
         paymentError.classList.remove('d-none');
         return;
       }
-
-      // Simulate payment prompt
-      alert(`Please proceed to pay $${amount.toFixed(2)} using ${paymentSelect.value}.`);
 
       // Save investment
       const investments = getUserInvestments(currentUser);
@@ -625,7 +667,8 @@
       saveUserInvestments(currentUser, investments);
 
       investModal.hide();
-      alert(`Successfully invested $${amount.toFixed(2)} in ${plan.name} using ${paymentSelect.value}.`);
+      alert(`Investment of $${amount.toFixed(2)} confirmed. Please complete your payment using ${paymentSelect.value} wallet.`);
+
       renderDashboard();
     });
   }
