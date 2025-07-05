@@ -160,8 +160,8 @@
     <button class="btn btn-outline-danger" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
   </div>
 
-  <!-- Summary Table -->
-  <div class="table-responsive mb-4">
+  <!-- Summary Table with note -->
+  <div class="table-responsive mb-2">
     <table class="table table-bordered text-center align-middle" style="max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 6px 20px rgba(25, 135, 84, 0.15);">
       <thead class="table-success">
         <tr>
@@ -178,6 +178,9 @@
         </tr>
       </tbody>
     </table>
+  </div>
+  <div class="text-center text-muted mb-4" style="max-width: 600px; margin: auto; font-style: italic;">
+    * Total Returns represent your earnings from investments so far.
   </div>
 
   <!-- Chart Section -->
@@ -245,7 +248,7 @@
   let signupData = null;
   let investmentChart = null;
 
-  // Investment plans data
+  // Updated investment plans with higher interest rates
   const investmentPlans = [
     {
       id: 'plan-basic',
@@ -253,7 +256,7 @@
       minInvestment: 100,
       maxInvestment: 1000,
       durationDays: 30,
-      interestRate: 5, // percent
+      interestRate: 15, // increased from 5% to 15%
       description: 'A low-risk plan with steady returns over 30 days.'
     },
     {
@@ -262,7 +265,7 @@
       minInvestment: 1000,
       maxInvestment: 5000,
       durationDays: 90,
-      interestRate: 12,
+      interestRate: 30, // increased from 12% to 30%
       description: 'Balanced plan with moderate risk and higher returns.'
     },
     {
@@ -271,7 +274,7 @@
       minInvestment: 5000,
       maxInvestment: 20000,
       durationDays: 180,
-      interestRate: 25,
+      interestRate: 50, // increased from 25% to 50%
       description: 'High-return plan for experienced investors.'
     }
   ];
