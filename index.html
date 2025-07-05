@@ -22,6 +22,19 @@
   .dashboard-card:hover {
     transform: translateY(-5px);
   }
+  .summary-card {
+    border-radius: 20px;
+    color: white;
+    padding: 2rem;
+    box-shadow: 0 8px 20px rgba(25, 135, 84, 0.3);
+    transition: transform 0.3s ease;
+  }
+  .summary-card:hover {
+    transform: scale(1.05);
+  }
+  .summary-total-invested { background: #198754; }
+  .summary-current-value { background: #0d6efd; }
+  .summary-total-returns { background: #ffc107; color: #212529; }
 
   h2, h3 {
     font-weight: 700;
@@ -59,6 +72,9 @@
   @media (max-width: 767px) {
     .dashboard-card {
       padding: 1.5rem;
+    }
+    .summary-card {
+      margin-bottom: 1rem;
     }
   }
 
@@ -160,27 +176,26 @@
     <button class="btn btn-outline-danger" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
   </div>
 
-  <!-- Summary Table with note -->
-  <div class="table-responsive mb-2">
-    <table class="table table-bordered text-center align-middle" style="max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 6px 20px rgba(25, 135, 84, 0.15);">
-      <thead class="table-success">
-        <tr>
-          <th>Total Invested</th>
-          <th>Current Value</th>
-          <th>Total Returns</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td id="total-invested" style="font-weight: 700; font-size: 1.5rem; color: #198754;">$0.00</td>
-          <td id="current-value" style="font-weight: 700; font-size: 1.5rem; color: #0d6efd;">$0.00</td>
-          <td id="total-returns" style="font-weight: 700; font-size: 1.5rem; color: #ffc107;">$0.00</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="text-center text-muted mb-4" style="max-width: 600px; margin: auto; font-style: italic;">
-    * Total Returns represent your earnings from investments so far.
+  <!-- Summary Cards -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="summary-card summary-total-invested text-center">
+        <h5>Total Invested</h5>
+        <h3 id="total-invested">$0.00</h3>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="summary-card summary-current-value text-center">
+        <h5>Current Value</h5>
+        <h3 id="current-value">$0.00</h3>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="summary-card summary-total-returns text-center">
+        <h5>Total Returns</h5>
+        <h3 id="total-returns">$0.00</h3>
+      </div>
+    </div>
   </div>
 
   <!-- Chart Section -->
@@ -248,34 +263,34 @@
   let signupData = null;
   let investmentChart = null;
 
-  // Investment plans with very short durations
+  // Investment plans data
   const investmentPlans = [
     {
       id: 'plan-basic',
       name: 'Basic Plan',
       minInvestment: 100,
       maxInvestment: 1000,
-      durationDays: 1, // 1 day duration
-      interestRate: 15,
-      description: 'A low-risk plan with steady returns over 1 day.'
+      durationDays: 30,
+      interestRate: 5, // percent
+      description: 'A low-risk plan with steady returns over 30 days.'
     },
     {
       id: 'plan-standard',
       name: 'Standard Plan',
       minInvestment: 1000,
       maxInvestment: 5000,
-      durationDays: 3, // 3 days duration
-      interestRate: 30,
-      description: 'Balanced plan with moderate risk and higher returns over 3 days.'
+      durationDays: 90,
+      interestRate: 12,
+      description: 'Balanced plan with moderate risk and higher returns.'
     },
     {
       id: 'plan-premium',
       name: 'Premium Plan',
       minInvestment: 5000,
       maxInvestment: 20000,
-      durationDays: 5, // 5 days duration
-      interestRate: 50,
-      description: 'High-return plan for experienced investors over 5 days.'
+      durationDays: 180,
+      interestRate: 25,
+      description: 'High-return plan for experienced investors.'
     }
   ];
 
@@ -533,12 +548,12 @@
     });
   }
 
-  // Open modal to invest in a plan with payment method selection
+  // Open modal to invest in a plan
   function openInvestModal(planId) {
     const plan = investmentPlans.find(p => p.id === planId);
     if (!plan) return;
 
-    // Create modal HTML dynamically with payment options
+    // Create modal HTML dynamically
     let modalHtml = `
       <div class="modal fade" id="investModal" tabindex="-1" aria-labelledby="investModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -554,16 +569,6 @@
                   <label for="invest-amount" class="form-label">Investment Amount ($)</label>
                   <input type="number" class="form-control" id="invest-amount" name="amount" min="${plan.minInvestment}" max="${plan.maxInvestment}" required placeholder="Between $${plan.minInvestment} and $${plan.maxInvestment}">
                   <div class="form-text">Minimum: $${plan.minInvestment}, Maximum: $${plan.maxInvestment}</div>
-                </div>
-                <div class="mb-3">
-                  <label for="payment-method" class="form-label">Select Payment Method</label>
-                  <select class="form-select" id="payment-method" required>
-                    <option value="" disabled selected>Select a cryptocurrency</option>
-                    <option value="BTC">Bitcoin (BTC)</option>
-                    <option value="ETH">Ethereum (ETH)</option>
-                    <option value="USDT">Tether (USDT)</option>
-                  </select>
-                  <div id="payment-error" class="text-danger d-none mt-2"></div>
                 </div>
                 <div id="invest-error" class="text-danger d-none"></div>
               </div>
@@ -590,13 +595,9 @@
     document.getElementById('investForm').addEventListener('submit', e => {
       e.preventDefault();
       const amountInput = document.getElementById('invest-amount');
-      const paymentSelect = document.getElementById('payment-method');
       const investError = document.getElementById('invest-error');
-      const paymentError = document.getElementById('payment-error');
       investError.classList.add('d-none');
       investError.innerText = '';
-      paymentError.classList.add('d-none');
-      paymentError.innerText = '';
 
       let amount = parseFloat(amountInput.value);
       if (isNaN(amount) || amount < plan.minInvestment || amount > plan.maxInvestment) {
@@ -605,27 +606,17 @@
         return;
       }
 
-      if (!paymentSelect.value) {
-        paymentError.innerText = 'Please select a payment method.';
-        paymentError.classList.remove('d-none');
-        return;
-      }
-
-      // Simulate payment prompt
-      alert(`Please proceed to pay $${amount.toFixed(2)} using ${paymentSelect.value}.`);
-
       // Save investment
       const investments = getUserInvestments(currentUser);
       investments.push({
         planId: plan.id,
         amount,
-        startDate: new Date().toISOString(),
-        paymentMethod: paymentSelect.value
+        startDate: new Date().toISOString()
       });
       saveUserInvestments(currentUser, investments);
 
       investModal.hide();
-      alert(`Successfully invested $${amount.toFixed(2)} in ${plan.name} using ${paymentSelect.value}.`);
+      alert(`Successfully invested $${amount.toFixed(2)} in ${plan.name}.`);
       renderDashboard();
     });
   }
