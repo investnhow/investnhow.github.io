@@ -22,10 +22,13 @@
   .dashboard-card:hover {
     transform: translateY(-5px);
   }
+
   h2, h3 {
     font-weight: 700;
     letter-spacing: 0.05em;
   }
+
+  /* Investment plans cards */
   .plan-card {
     border-radius: 20px;
     border: none;
@@ -45,15 +48,21 @@
   .invest-btn:hover {
     background-color: #145c32;
   }
+
+  /* Table styling */
   .investment-table th, .investment-table td {
     vertical-align: middle;
     font-weight: 500;
   }
+
+  /* Responsive tweaks */
   @media (max-width: 767px) {
     .dashboard-card {
       padding: 1.5rem;
     }
   }
+
+  /* Additional styling for verification code display */
   #displayVerificationCode {
     font-weight: 700;
     font-size: 1.6rem;
@@ -121,6 +130,7 @@
         </div>
         <button type="submit" class="btn btn-success w-100">Sign Up</button>
       </div>
+
       <div id="verification-section" class="d-none mt-3">
         <p>A verification code has been generated.</p>
         <p><strong id="displayVerificationCode"></strong></p>
@@ -149,6 +159,8 @@
     </div>
     <button class="btn btn-outline-danger" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
   </div>
+
+  <!-- Summary Table with note -->
   <div class="table-responsive mb-2">
     <table class="table table-bordered text-center align-middle" style="max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 6px 20px rgba(25, 135, 84, 0.15);">
       <thead class="table-success">
@@ -170,10 +182,16 @@
   <div class="text-center text-muted mb-4" style="max-width: 600px; margin: auto; font-style: italic;">
     * Total Returns represent your earnings from investments so far.
   </div>
+
+  <!-- Chart Section -->
   <h3 class="mb-3">Investment Performance</h3>
   <canvas id="investmentChart" height="120"></canvas>
+
+  <!-- Investment Plans -->
   <h3 class="my-4">Available Investment Plans</h3>
   <div class="row" id="investment-plans"></div>
+
+  <!-- User Investments -->
   <h3 class="mt-5 mb-3">Your Investments</h3>
   <div class="table-responsive">
     <table class="table table-striped investment-table shadow-sm rounded-4">
@@ -237,7 +255,7 @@
       name: 'Basic Plan',
       minInvestment: 100,
       maxInvestment: 1000,
-      durationDays: 1,
+      durationDays: 1, // 1 day duration
       interestRate: 15,
       description: 'A low-risk plan with steady returns over 1 day.'
     },
@@ -246,7 +264,7 @@
       name: 'Standard Plan',
       minInvestment: 1000,
       maxInvestment: 5000,
-      durationDays: 3,
+      durationDays: 3, // 3 days duration
       interestRate: 30,
       description: 'Balanced plan with moderate risk and higher returns over 3 days.'
     },
@@ -255,35 +273,272 @@
       name: 'Premium Plan',
       minInvestment: 5000,
       maxInvestment: 20000,
-      durationDays: 5,
+      durationDays: 5, // 5 days duration
       interestRate: 50,
       description: 'High-return plan for experienced investors over 5 days.'
     }
   ];
 
-  // Wallet addresses and network info
-  const walletAddresses = {
-    BTC: {
-      address: '16ev7k4nfetAWkFDvmS6iPDhthujpFJQ4P',
-      network: 'Bitcoin'
-    },
-    ETH: {
-      address: '0xced6ec6ec624b561483822768b8af6bad3777aee',
-      network: 'Ethereum (ERC20)'
-    },
-    USDT: {
-      address: 'TB3imDVw6ofEdmAq8YrL2bczmXpnpHw2m8',
-      network: 'Tron (TRC20)'
+  // LocalStorage helpers
+  function getUsers() { return JSON.parse(localStorage.getItem('users') || '{}'); }
+  function saveUsers(users) { localStorage.setItem('users', JSON.stringify(users)); }
+  function setCurrentUser(email) { 
+    currentUser = email; 
+    if(email) localStorage.setItem('currentUser', email); 
+    else localStorage.removeItem('currentUser'); 
+  }
+  function getCurrentUser() { return localStorage.getItem('currentUser'); }
+
+  // User investments helper
+  function getUserInvestments(email) {
+    const investments = JSON.parse(localStorage.getItem('investments') || '{}');
+    return investments[email] || [];
+  }
+  function saveUserInvestments(email, investments) {
+    const allInvestments = JSON.parse(localStorage.getItem('investments') || '{}');
+    allInvestments[email] = investments;
+    localStorage.setItem('investments', JSON.stringify(allInvestments));
+  }
+
+  // Render navigation links based on auth state
+  function renderNav() {
+    const navLinks = document.getElementById('nav-links');
+    navLinks.innerHTML = '';
+    if (currentUser) {
+      navLinks.innerHTML = `
+        <li class="nav-item"><a href="#dashboard" class="nav-link active" id="nav-dashboard">Dashboard</a></li>
+        <li class="nav-item"><a href="#logout" class="nav-link" id="nav-logout">Logout</a></li>
+      `;
+    } else {
+      navLinks.innerHTML = `
+        <li class="nav-item"><a href="#home" class="nav-link active" id="nav-home-link">Home</a></li>
+        <li class="nav-item"><a href="#login" class="nav-link" id="nav-login">Login</a></li>
+        <li class="nav-item"><a href="#signup" class="nav-link" id="nav-signup">Sign Up</a></li>
+      `;
     }
-  };
+    document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', navHandler));
+  }
 
-  // ... all other functions remain the same ...
+  // Navigation click handler
+  function navHandler(e) {
+    e.preventDefault();
+    const id = e.target.id;
+    if (id === 'nav-dashboard') navigateTo('dashboard');
+    else if (id === 'nav-login') navigateTo('login');
+    else if (id === 'nav-signup') navigateTo('signup');
+    else if (id === 'nav-logout') logout();
+    else if (id === 'nav-home-link' || id === 'nav-home') navigateTo('landing');
+  }
 
-  // Only update the openInvestModal function:
+  // Show/hide sections
+  function showSection(section) {
+    ['landing-section','login-section','signup-section','dashboard-section'].forEach(id => document.getElementById(id).style.display = 'none');
+    if (section === 'dashboard') {
+      if (!currentUser) { showSection('login'); return; }
+      document.getElementById('dashboard-section').style.display = '';
+      const users = getUsers();
+      document.getElementById('userName').innerText = users[currentUser]?.fullName || currentUser;
+      renderDashboard();
+    } else if (section === 'login') {
+      document.getElementById('login-section').style.display = '';
+    } else if (section === 'signup') {
+      document.getElementById('signup-section').style.display = '';
+      document.getElementById('verification-section').classList.add('d-none');
+      document.getElementById('signup-fields').classList.remove('d-none');
+    } else {
+      document.getElementById('landing-section').style.display = '';
+    }
+  }
+
+  // Navigate and update URL hash
+  function navigateTo(section) {
+    let hash = '';
+    if (section === 'landing' || section === 'home') hash = '#home';
+    else if (section === 'login') hash = '#login';
+    else if (section === 'signup') hash = '#signup';
+    else if (section === 'dashboard') hash = '#dashboard';
+    window.location.hash = hash;
+    showSection(section);
+  }
+
+  // Calculate returns for an investment
+  function calculateInvestmentReturn(investment) {
+    const plan = investmentPlans.find(p => p.id === investment.planId);
+    if (!plan) return 0;
+
+    const startDate = new Date(investment.startDate);
+    const now = new Date();
+    const elapsedDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+    const effectiveDays = Math.min(elapsedDays, plan.durationDays);
+
+    // Simple interest formula: principal * rate * time
+    const returns = investment.amount * (plan.interestRate / 100) * (effectiveDays / plan.durationDays);
+    return returns;
+  }
+
+  // Render dashboard summary, investments, and chart
+  function renderDashboard() {
+    const investments = getUserInvestments(currentUser);
+    if (investments.length === 0) {
+      document.getElementById('user-investments-body').innerHTML = `<tr><td colspan="7" class="text-center text-muted">No investments yet.</td></tr>`;
+      document.getElementById('total-invested').innerText = '$0.00';
+      document.getElementById('current-value').innerText = '$0.00';
+      document.getElementById('total-returns').innerText = '$0.00';
+      renderInvestmentChart([], []);
+    } else {
+      let totalInvested = 0, totalReturns = 0;
+      const tbody = document.getElementById('user-investments-body');
+      tbody.innerHTML = '';
+      investments.forEach(inv => {
+        const plan = investmentPlans.find(p => p.id === inv.planId);
+        if (!plan) return;
+
+        const returns = calculateInvestmentReturn(inv);
+        const currentValue = inv.amount + returns;
+        totalInvested += inv.amount;
+        totalReturns += returns;
+
+        const startDate = new Date(inv.startDate);
+        const durationText = `${plan.durationDays} days`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${plan.name}</td>
+          <td>$${inv.amount.toFixed(2)}</td>
+          <td>${startDate.toLocaleDateString()}</td>
+          <td>${durationText}</td>
+          <td>${plan.interestRate}%</td>
+          <td>$${currentValue.toFixed(2)}</td>
+          <td>$${returns.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('total-invested').innerText = `$${totalInvested.toFixed(2)}`;
+      document.getElementById('current-value').innerText = `$${(totalInvested + totalReturns).toFixed(2)}`;
+      document.getElementById('total-returns').innerText = `$${totalReturns.toFixed(2)}`;
+
+      // Prepare data for chart: show total current value over last 30 days
+      const chartLabels = [];
+      const chartValues = [];
+
+      const now = new Date();
+      for(let i = 29; i >= 0; i--) {
+        const day = new Date(now);
+        day.setDate(now.getDate() - i);
+        chartLabels.push(day.toLocaleDateString(undefined, {month: 'short', day: 'numeric'}));
+
+        let dayValue = 0;
+        investments.forEach(inv => {
+          const plan = investmentPlans.find(p => p.id === inv.planId);
+          if (!plan) return;
+          const startDate = new Date(inv.startDate);
+          if(day < startDate) return;
+          const elapsedDays = Math.floor((day - startDate) / (1000 * 60 * 60 * 24));
+          const effectiveDays = Math.min(elapsedDays, plan.durationDays);
+          const returns = inv.amount * (plan.interestRate / 100) * (effectiveDays / plan.durationDays);
+          dayValue += inv.amount + returns;
+        });
+        chartValues.push(dayValue.toFixed(2));
+      }
+
+      renderInvestmentChart(chartLabels, chartValues);
+    }
+
+    renderInvestmentPlans();
+  }
+
+  // Render Chart.js line chart
+  function renderInvestmentChart(labels, data) {
+    const ctx = document.getElementById('investmentChart').getContext('2d');
+    if (investmentChart) {
+      investmentChart.destroy();
+    }
+    investmentChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Portfolio Value ($)',
+          data,
+          fill: true,
+          backgroundColor: 'rgba(25, 135, 84, 0.2)',
+          borderColor: '#198754',
+          borderWidth: 3,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#198754'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true, labels: { font: { size: 14, weight: 'bold' } } },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { maxRotation: 45, minRotation: 45 }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#e9ecef' },
+            ticks: {
+              callback: val => '$' + val,
+              font: { size: 13 }
+            }
+          }
+        },
+        interaction: {
+          mode: 'nearest',
+          axis: 'x',
+          intersect: false
+        }
+      }
+    });
+  }
+
+  // Render investment plans with invest buttons
+  function renderInvestmentPlans() {
+    const container = document.getElementById('investment-plans');
+    container.innerHTML = '';
+    investmentPlans.forEach(plan => {
+      const col = document.createElement('div');
+      col.className = 'col-md-4 mb-4';
+      col.innerHTML = `
+        <div class="plan-card p-4 h-100 d-flex flex-column justify-content-between">
+          <div>
+            <h5 class="fw-bold">${plan.name}</h5>
+            <p class="text-muted">${plan.description}</p>
+            <ul class="list-unstyled small mb-3">
+              <li><strong>Min Investment:</strong> $${plan.minInvestment}</li>
+              <li><strong>Max Investment:</strong> $${plan.maxInvestment}</li>
+              <li><strong>Duration:</strong> ${plan.durationDays} days</li>
+              <li><strong>Interest Rate:</strong> ${plan.interestRate}%</li>
+            </ul>
+          </div>
+          <button class="btn btn-success invest-btn" data-plan-id="${plan.id}">Invest Now</button>
+        </div>
+      `;
+      container.appendChild(col);
+    });
+
+    // Add event listeners to invest buttons
+    document.querySelectorAll('.invest-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const planId = btn.getAttribute('data-plan-id');
+        openInvestModal(planId);
+      });
+    });
+  }
+
+  // Open modal to invest in a plan with payment method selection
   function openInvestModal(planId) {
     const plan = investmentPlans.find(p => p.id === planId);
     if (!plan) return;
 
+    // Create modal HTML dynamically with payment options
     let modalHtml = `
       <div class="modal fade" id="investModal" tabindex="-1" aria-labelledby="investModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -310,19 +565,10 @@
                   </select>
                   <div id="payment-error" class="text-danger d-none mt-2"></div>
                 </div>
-                <div id="payment-details" class="d-none border rounded p-3 bg-light">
-                  <p><strong>Wallet Address:</strong></p>
-                  <p id="wallet-address" style="word-break: break-all; font-family: monospace;"></p>
-                  <p id="wallet-network" class="mb-2"></p>
-                  <div class="text-center">
-                    <img id="wallet-qr" src="" alt="QR Code" style="max-width: 180px; margin: auto;" />
-                  </div>
-                  <small class="text-muted d-block mt-2">Scan the QR code or copy the address to complete your payment.</small>
-                </div>
-                <div id="invest-error" class="text-danger d-none mt-3"></div>
+                <div id="invest-error" class="text-danger d-none"></div>
               </div>
               <div class="modal-footer">
-                <button type="submit" class="btn btn-success">Confirm Investment</button>
+                <button type="submit" class="btn btn-success">Invest</button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
               </div>
             </form>
@@ -331,7 +577,7 @@
       </div>
     `;
 
-    // Remove any existing modal and add new one
+    // Append modal to body
     const existingModal = document.getElementById('investModal');
     if (existingModal) existingModal.remove();
     document.body.insertAdjacentHTML('beforeend', modalHtml);
@@ -340,33 +586,7 @@
     const investModal = new bootstrap.Modal(document.getElementById('investModal'));
     investModal.show();
 
-    // Payment method change event
-    const paymentSelect = document.getElementById('payment-method');
-    paymentSelect.addEventListener('change', () => {
-      const val = paymentSelect.value;
-      const detailsDiv = document.getElementById('payment-details');
-      const walletAddressElem = document.getElementById('wallet-address');
-      const walletQRElem = document.getElementById('wallet-qr');
-      const walletNetworkElem = document.getElementById('wallet-network');
-      const paymentError = document.getElementById('payment-error');
-
-      if (val && walletAddresses[val]) {
-        detailsDiv.classList.remove('d-none');
-        walletAddressElem.textContent = walletAddresses[val].address;
-        walletNetworkElem.innerHTML = `<strong>Network:</strong> ${walletAddresses[val].network}`;
-        const qrData = encodeURIComponent(walletAddresses[val].address);
-        walletQRElem.src = `https://chart.googleapis.com/chart?cht=qr&chs=180x180&chl=${qrData}`;
-        paymentError.classList.add('d-none');
-        paymentError.textContent = '';
-      } else {
-        detailsDiv.classList.add('d-none');
-        walletAddressElem.textContent = '';
-        walletNetworkElem.textContent = '';
-        walletQRElem.src = '';
-      }
-    });
-
-    // Invest form submission with redirect to crypto app
+    // Handle invest form submission
     document.getElementById('investForm').addEventListener('submit', e => {
       e.preventDefault();
       const amountInput = document.getElementById('invest-amount');
@@ -374,39 +594,27 @@
       const investError = document.getElementById('invest-error');
       const paymentError = document.getElementById('payment-error');
       investError.classList.add('d-none');
-      investError.textContent = '';
+      investError.innerText = '';
       paymentError.classList.add('d-none');
-      paymentError.textContent = '';
+      paymentError.innerText = '';
 
       let amount = parseFloat(amountInput.value);
       if (isNaN(amount) || amount < plan.minInvestment || amount > plan.maxInvestment) {
-        investError.textContent = `Please enter an amount between $${plan.minInvestment} and $${plan.maxInvestment}.`;
+        investError.innerText = `Please enter an amount between $${plan.minInvestment} and $${plan.maxInvestment}.`;
         investError.classList.remove('d-none');
         return;
       }
 
       if (!paymentSelect.value) {
-        paymentError.textContent = 'Please select a payment method.';
+        paymentError.innerText = 'Please select a payment method.';
         paymentError.classList.remove('d-none');
         return;
       }
 
-      const selected = walletAddresses[paymentSelect.value];
-      let uri = '';
-      switch(paymentSelect.value) {
-        case 'BTC':
-          uri = `bitcoin:${selected.address}`;
-          break;
-        case 'ETH':
-          uri = `ethereum:${selected.address}`;
-          break;
-        case 'USDT':
-          // USDT on TRC20: no URI standard, but show address for Tron wallets
-          uri = `https://tronscan.org/#/address/${selected.address}`;
-          break;
-      }
+      // Simulate payment prompt
+      alert(`Please proceed to pay $${amount.toFixed(2)} using ${paymentSelect.value}.`);
 
-      // Save investment locally
+      // Save investment
       const investments = getUserInvestments(currentUser);
       investments.push({
         planId: plan.id,
@@ -416,21 +624,137 @@
       });
       saveUserInvestments(currentUser, investments);
 
-      // Close modal
-      const investModal = bootstrap.Modal.getInstance(document.getElementById('investModal'));
-      if(investModal) investModal.hide();
-
-      // Redirect to crypto wallet app or TronScan (for USDT TRC20)
-      window.location.href = uri;
-
-      // Update dashboard after redirect (if user returns)
+      investModal.hide();
+      alert(`Successfully invested $${amount.toFixed(2)} in ${plan.name} using ${paymentSelect.value}.`);
       renderDashboard();
     });
   }
 
-  // ... rest of your code remains unchanged (signup, login, dashboard, etc.) ...
-  // (All other functions from previous code remain the same)
-  // Be sure to keep all other functions as in previous responses!
+  // Signup form submit handler
+  document.getElementById('signupForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (!document.getElementById('verification-section').classList.contains('d-none')) return; // prevent resubmit during verification
+
+    const form = e.target;
+    const fullName = form.fullName.value.trim();
+    const email = form.email.value.trim().toLowerCase();
+
+    if (!fullName || !email) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    const users = getUsers();
+    if (users[email]) {
+      alert("Email already registered.");
+      return;
+    }
+
+    signupVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    signupData = { fullName, email };
+
+    // Show verification code in signup section
+    document.getElementById('displayVerificationCode').innerText = signupVerificationCode;
+    document.getElementById('signup-fields').classList.add('d-none');
+    document.getElementById('verification-section').classList.remove('d-none');
+    document.getElementById('verification-error').classList.add('d-none');
+  });
+
+  // Copy & Paste Code button handler
+  document.getElementById('copyCodeBtn').addEventListener('click', () => {
+    if (!signupVerificationCode) return;
+    navigator.clipboard.writeText(signupVerificationCode).then(() => {
+      alert("Verification code copied to clipboard.");
+      const verificationInput = document.getElementById('verification-code');
+      verificationInput.value = signupVerificationCode;
+      verificationInput.focus();
+    }, () => {
+      alert("Failed to copy. Please copy the code manually: " + signupVerificationCode);
+    });
+  });
+
+  // Verify button handler
+  document.getElementById('verify-btn').addEventListener('click', async () => {
+    const inputCode = document.getElementById('verification-code').value.trim();
+    if (inputCode !== signupVerificationCode) {
+      document.getElementById('verification-error').classList.remove('d-none');
+      return;
+    }
+    document.getElementById('verification-error').classList.add('d-none');
+
+    if (!signupData?.fullName || !signupData?.email) {
+      alert("Signup data missing. Please try again.");
+      return;
+    }
+
+    // Simulate form submission (can be replaced with actual API call)
+    try {
+      // Save user locally as verified
+      const users = getUsers();
+      users[signupData.email] = { fullName: signupData.fullName, verified: true };
+      saveUsers(users);
+      setCurrentUser(signupData.email);
+      currentUser = signupData.email;
+      renderNav();
+      navigateTo('dashboard');
+      document.getElementById('signupForm').reset();
+      signupVerificationCode = null;
+      signupData = null;
+      document.getElementById('verification-section').classList.add('d-none');
+      document.getElementById('signup-fields').classList.remove('d-none');
+      alert('Thank you for signing up! You are now logged in.');
+    } catch (error) {
+      alert('Signup failed. Please try again later.');
+      console.error(error);
+    }
+  });
+
+  // Login form submit handler
+  document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const users = getUsers();
+    if (users[email] && users[email].verified) {
+      setCurrentUser(email);
+      currentUser = email;
+      renderNav();
+      navigateTo('dashboard');
+    } else {
+      const alertEl = document.getElementById('login-alert');
+      alertEl.innerText = "Invalid or unverified email.";
+      alertEl.classList.remove('d-none');
+    }
+  });
+
+  // Logout function
+  function logout() {
+    setCurrentUser(null);
+    currentUser = null;
+    renderNav();
+    navigateTo('landing');
+  }
+
+  // Initialization
+  document.getElementById('get-started-btn').onclick = () => navigateTo('signup');
+  document.getElementById('nav-home').onclick = e => { e.preventDefault(); navigateTo('landing'); };
+  document.getElementById('logout-btn').onclick = logout;
+
+  window.addEventListener('hashchange', () => {
+    let hash = window.location.hash.replace('#', '');
+    if (!hash || hash === 'home') hash = 'landing';
+    if (hash === 'dashboard' && !currentUser) hash = 'login';
+    showSection(hash);
+    renderNav();
+  });
+
+  window.onload = () => {
+    currentUser = getCurrentUser();
+    renderNav();
+    let hash = window.location.hash.replace('#', '');
+    if (!hash || hash === 'home') hash = 'landing';
+    if (hash === 'dashboard' && !currentUser) hash = 'login';
+    showSection(hash);
+  };
 </script>
 </body>
 </html>
